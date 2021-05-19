@@ -1,18 +1,40 @@
 from typing import Dict, Tuple, List
-from grid import TriangleGrid, Triangle
+from grid import TriangleGrid, Triangle, Shape
 from itertools import permutations
+from enum import Enum
+from visualization import visualize_grid
 
 
 def is_upside_down(triangle: Tuple[int, int, int]) -> bool:
-    if triangle[2] - triangle[1] == triangle[0]:
+    if triangle[2] - triangle[1] == triangle[0] and not (triangle[2] - triangle[1] == triangle[0] + 1 or
+                                                         triangle[2] - triangle[1] == triangle[0] - 1):
         raise ValueError
     return triangle[2] - triangle[1] < triangle[0]
 
 
-class Direction:
+class Direction(Enum):
     H = 0
     N = 1
     S = 2
+
+
+def next_triangle_coordinate(current_coordinate: Tuple[int, int, int], direction: Direction) -> Tuple[int, int, int]:
+    if direction == Direction.H:
+        if is_upside_down(current_coordinate):
+            current_coordinate = (current_coordinate[0] - 1, current_coordinate[1], current_coordinate[2] + 1)
+        else:
+            current_coordinate = (current_coordinate[0] + 1, current_coordinate[1] + 1, current_coordinate[2])
+    elif direction == Direction.N:
+        if is_upside_down(current_coordinate):
+            current_coordinate = (current_coordinate[0], current_coordinate[1] - 1, current_coordinate[2] + 1)
+        else:
+            current_coordinate = (current_coordinate[0] + 1, current_coordinate[1] + 1, current_coordinate[2])
+    else:  # direction == Direction.S
+        if is_upside_down(current_coordinate):
+            current_coordinate = (current_coordinate[0] - 1, current_coordinate[1], current_coordinate[2] + 1)
+        else:
+            current_coordinate = (current_coordinate[0], current_coordinate[1] + 1, current_coordinate[2] - 1)
+    return current_coordinate
 
 
 class Face:
@@ -20,7 +42,7 @@ class Face:
         self._length: int = length
         self._coordinates: List[Tuple[int, int, int]] = []
 
-    def set_coordinates(self, start: Tuple[int, int, int], direction: Direction):
+    def set_coordinates(self, start: Tuple[int, int, int], direction: Direction) -> Tuple[int, int, int]:
         """
         Assign a coordinate for each triangle making up the face.
         Given is a starting coordinate of the first face. The face is facing in the direction of direction.
@@ -33,23 +55,11 @@ class Face:
         """
         current_coordinate: Tuple[int, int, int] = start
         self._coordinates = [current_coordinate]
-        for i in range(self._length):
-            if direction == Direction.H:
-                if is_upside_down(current_coordinate):
-                    current_coordinate = (current_coordinate[0] - 1, current_coordinate[1], current_coordinate[2] + 1)
-                else:
-                    current_coordinate = (current_coordinate[0] + 1, current_coordinate[1] + 1, current_coordinate[2])
-            elif direction == Direction.N:
-                if is_upside_down(current_coordinate):
-                    current_coordinate = (current_coordinate[0], current_coordinate[1] - 1, current_coordinate[2] + 1)
-                else:
-                    current_coordinate = (current_coordinate[0] + 1, current_coordinate[1] + 1, current_coordinate[2])
-            else:  # direction == Direction.S
-                if is_upside_down(current_coordinate):
-                    current_coordinate = (current_coordinate[0] - 1, current_coordinate[1], current_coordinate[2] + 1)
-                else:
-                    current_coordinate = (current_coordinate[0], current_coordinate[1] + 1, current_coordinate[2] - 1)
+        for i in range(self._length - 1):
+            current_coordinate = next_triangle_coordinate(current_coordinate, direction)
             self._coordinates.append(current_coordinate)
+        print('Length {}: {}'.format(self._length, len(self._coordinates)))
+        return current_coordinate
 
     def fold(self, direction: Direction, index: int):
         """
@@ -83,33 +93,42 @@ class Face:
             raise ValueError
         self._coordinates = new_coordinates
 
-    def calculate_triangles(self) -> List[Triangle]:
+    def calculate_triangles(self) -> List[Tuple[int, int]]:
         """
         Transform a three coordinate grid to a traditional grid
 
         :return: List of Triangles with traditional coordinates
         """
-        triangles: List[Triangle] = []
+        triangles: List[Tuple[int, int]] = []
         for coordinate in self._coordinates:
             if is_upside_down(coordinate):
-                triangles.append(Triangle(coordinate[1] + coordinate[2] - 1, coordinate[0] - 1))
+                triangles.append((coordinate[1] + coordinate[2] - 1, coordinate[0] - 1))
             else:
-                triangles.append(Triangle(coordinate[1] + coordinate[2] - 1, coordinate[0]))
+                triangles.append((coordinate[1] + coordinate[2] - 1, coordinate[0]))
         return triangles
 
 
 class Strip:
-    def __init__(self, crease_amount: int, faces: List[Face], creases: int):
-        self._crease_amount: int = crease_amount
+    def __init__(self, faces: List[Face], creases: int):
+        self._crease_amount: int = len(bin(creases).replace('0b', ''))
         self._faces: List[Face] = faces
         self._creases: int = creases
-        self._database: Dict[int, FoldedStrip] = {}
+        self.initialize_faces()
+
+    def initialize_faces(self):
+        current_coordinate: Tuple[int, int, int] = (0, 0, 1)
+        for face in self._faces:
+            current_coordinate = face.set_coordinates(current_coordinate, Direction.H)
+            current_coordinate = next_triangle_coordinate(current_coordinate, Direction.H)
 
     def is_simple_foldable(self) -> bool:
-        amount_of_creases: int = len(bin(self._creases).replace('0b'))
-        orders: List[Tuple] = list(permutations(range(amount_of_creases), amount_of_creases))
+        orders: List[Tuple] = list(permutations(range(self._crease_amount), self._crease_amount))
+        folded_strip: FoldedStrip = FoldedStrip(self, 0)
+        folded_strip.visualize_strip()
+        return True
 
-        return False
+    def get_faces(self) -> Tuple:
+        return tuple(self._faces)
 
     def __fold_creases(self, order: List[int]):
         pass
@@ -124,4 +143,12 @@ class FoldedStrip:
         pass
 
     def visualize_strip(self):
-        pass
+        grid: TriangleGrid = TriangleGrid()
+        for face in self._strip.get_faces():
+            for triangle in face.calculate_triangles():
+                if triangle in grid.grid:
+                    t: Shape = grid.grid[triangle]
+                    t.set_score(t.get_score() + 1)
+                else:
+                    grid.add_triangle(*triangle)
+        visualize_grid(grid)
