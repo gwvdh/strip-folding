@@ -4,9 +4,9 @@ from itertools import permutations
 
 
 def is_upside_down(triangle: Tuple[int, int, int]) -> bool:
-    if triangle[0] + triangle[1] - triangle[2] == 0:
+    if triangle[2] - triangle[1] == triangle[0]:
         raise ValueError
-    return triangle[0] + triangle[1] - triangle[2] > 0
+    return triangle[2] - triangle[1] < triangle[0]
 
 
 class Direction:
@@ -84,7 +84,18 @@ class Face:
         self._coordinates = new_coordinates
 
     def calculate_triangles(self) -> List[Triangle]:
-        pass
+        """
+        Transform a three coordinate grid to a traditional grid
+
+        :return: List of Triangles with traditional coordinates
+        """
+        triangles: List[Triangle] = []
+        for coordinate in self._coordinates:
+            if is_upside_down(coordinate):
+                triangles.append(Triangle(coordinate[1] + coordinate[2] - 1, coordinate[0] - 1))
+            else:
+                triangles.append(Triangle(coordinate[1] + coordinate[2] - 1, coordinate[0]))
+        return triangles
 
 
 class Strip:
@@ -114,45 +125,3 @@ class FoldedStrip:
 
     def visualize_strip(self):
         pass
-#
-#
-# def is_upside_down(x: int, y: int):
-#     return (y % 2 == 1) != (x % 2 == 1)
-#
-#
-# def get_triangle_coordinate(bit_string: int, start: Tuple[int, int], length: int) -> Tuple[int, int]:
-#     """
-#     Find the coordinate given a bit string (as an integer) representing folds.
-#     :param bit_string: The bit string representing folds
-#     :param start: Starting coordinate of the (static) first triangle
-#     :param length: The length of the strip
-#     :return: The coordinate of the final triangle in the strip when all folds are folded
-#     """
-#     direction: str = 'B'  # 'B'; base, 'U'; up, 'D'; down
-#     x_coordinate: int = start[0]
-#     y_coordinate: int = start[1]
-#     for crease in range(length):
-#         if bit_string & (1 << crease):  # If the ith crease is folded
-#             if crease % 2 == 0:
-#                 direction = 'B' if direction == 'D' else 'D'
-#             else:
-#                 direction = 'B' if direction == 'U' else 'U'
-#         else:
-#             if direction == 'B':
-#                 x_coordinate += 1
-#             elif direction == 'U':
-#                 if is_upside_down(x_coordinate, y_coordinate):
-#                     y_coordinate += 1
-#                 else:
-#                     x_coordinate -= 1
-#             elif direction == 'D':
-#                 if is_upside_down(x_coordinate, y_coordinate):
-#                     x_coordinate -= 1
-#                 else:
-#                     y_coordinate -= 1
-#             else:
-#                 raise ValueError('Direction {} does not exist'.format(direction))
-#     return x_coordinate, y_coordinate
-#
-
-
