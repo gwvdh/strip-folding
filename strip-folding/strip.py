@@ -58,7 +58,6 @@ class Face:
         for i in range(self._length - 1):
             current_coordinate = next_triangle_coordinate(current_coordinate, direction)
             self._coordinates.append(current_coordinate)
-        print('Length {}: {}'.format(self._length, len(self._coordinates)))
         return current_coordinate
 
     def fold(self, direction: Direction, index: int):
@@ -74,19 +73,19 @@ class Face:
         if direction == Direction.H:
             for coordinate in self._coordinates:
                 new_coordinate: Tuple[int, int, int] = (2 * index - coordinate[0],
-                                                        index - coordinate[2],
-                                                        index - coordinate[1])
+                                                        coordinate[2] - index,
+                                                        index + coordinate[1])
                 new_coordinates.append(new_coordinate)
         elif direction == Direction.N:
             for coordinate in self._coordinates:
-                new_coordinate: Tuple[int, int, int] = (coordinate[2] + index,
+                new_coordinate: Tuple[int, int, int] = (coordinate[2] - index,
                                                         2 * index - coordinate[1],
-                                                        coordinate[0] - index)
+                                                        coordinate[0] + index)
                 new_coordinates.append(new_coordinate)
         elif direction == Direction.S:
             for coordinate in self._coordinates:
-                new_coordinate: Tuple[int, int, int] = (coordinate[1] + index,
-                                                        coordinate[0] - index,
+                new_coordinate: Tuple[int, int, int] = (index - coordinate[1],
+                                                        index - coordinate[0],
                                                         2 * index - coordinate[2])
                 new_coordinates.append(new_coordinate)
         else:
