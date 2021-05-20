@@ -19,7 +19,19 @@ class VisualizationTests(unittest.TestCase):
         f1: Face = Face(5)
         faces: List[Face] = [Face(3), Face(4), Face(1), Face(1), f1]
         creases: int = int('1000', 2)
-        strip: Strip = Strip(faces, creases)
+        folds: int = int('0000', 2)
+        strip: Strip = Strip(faces, creases, folds)
         f1.fold(Direction.S, 5)
+        f1.fold(Direction.H, 0)
+        self.assertTrue(strip.is_simple_foldable())
+
+    def test_strip_crease_folds(self):
+        faces: List[Face] = [Face(3), Face(4), Face(1), Face(1), Face(5)]
+        creases: int = int('0000', 2)
+        folds: int = int('0000', 2)
+        strip: Strip = Strip(faces, creases, folds, 4)
+        strip.fold_crease(0)
+        strip.fold_crease(2)
+        strip.fold_crease(3)
         self.assertTrue(strip.is_simple_foldable())
 

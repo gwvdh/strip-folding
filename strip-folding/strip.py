@@ -1,5 +1,5 @@
-from typing import Dict, Tuple, List
-from grid import TriangleGrid, Triangle, Shape
+from typing import Tuple, List
+from grid import TriangleGrid, Shape
 from itertools import permutations
 from enum import Enum
 from visualization import visualize_grid
@@ -40,7 +40,40 @@ def next_triangle_coordinate(current_coordinate: Tuple[int, int, int], direction
 class Face:
     def __init__(self, length: int):
         self._length: int = length
+        self._direction: Direction = Direction.H
         self._coordinates: List[Tuple[int, int, int]] = []
+
+    def get_last_crease(self) -> Tuple[Direction, int]:
+        last_tuple: Tuple[int, int, int] = self._coordinates[-1]
+        if self._direction == Direction.H:
+            # H + N = S
+            if last_tuple[2] - last_tuple[0] > last_tuple[1]:
+                return Direction.S, last_tuple[2]
+            elif last_tuple[0] + last_tuple[1] > last_tuple[2]:
+                return Direction.N, last_tuple[1]
+            else:
+                raise Exception('Incorrect crease coordinate: {}'.format(last_tuple))
+        elif self._direction == Direction.N:
+            # H + N = S
+            if last_tuple[2] - last_tuple[1] > last_tuple[0]:
+                return Direction.H, last_tuple[0]
+            elif last_tuple[0] + last_tuple[1] > last_tuple[2]:
+                return Direction.S, last_tuple[2]
+            else:
+                raise Exception('Incorrect crease coordinate: {}'.format(last_tuple))
+        elif self._direction == Direction.S:
+            # H + N = S
+            if last_tuple[2] - last_tuple[1] > last_tuple[0]:
+                return Direction.N, last_tuple[1]
+            elif last_tuple[0] + last_tuple[1] > last_tuple[2]:
+                return Direction.H, last_tuple[0]
+            else:
+                raise Exception('Incorrect crease coordinate: {}'.format(last_tuple))
+        else:
+            raise Exception
+
+    def set_absolute_coordinates(self, coordinates: List[Tuple[int, int, int]]):
+        self._coordinates = coordinates
 
     def set_coordinates(self, start: Tuple[int, int, int], direction: Direction) -> Tuple[int, int, int]:
         """
@@ -76,18 +109,30 @@ class Face:
                                                         coordinate[2] - index,
                                                         index + coordinate[1])
                 new_coordinates.append(new_coordinate)
+            if self._direction == Direction.N:
+                self._direction = Direction.S
+            elif self._direction == Direction.S:
+                self._direction = Direction.N
         elif direction == Direction.N:
             for coordinate in self._coordinates:
                 new_coordinate: Tuple[int, int, int] = (coordinate[2] - index,
                                                         2 * index - coordinate[1],
                                                         coordinate[0] + index)
                 new_coordinates.append(new_coordinate)
+            if self._direction == Direction.H:
+                self._direction = Direction.S
+            elif self._direction == Direction.S:
+                self._direction = Direction.H
         elif direction == Direction.S:
             for coordinate in self._coordinates:
                 new_coordinate: Tuple[int, int, int] = (index - coordinate[1],
                                                         index - coordinate[0],
                                                         2 * index - coordinate[2])
                 new_coordinates.append(new_coordinate)
+            if self._direction == Direction.N:
+                self._direction = Direction.H
+            elif self._direction == Direction.H:
+                self._direction = Direction.N
         else:
             raise ValueError
         self._coordinates = new_coordinates
@@ -108,10 +153,11 @@ class Face:
 
 
 class Strip:
-    def __init__(self, faces: List[Face], creases: int):
-        self._crease_amount: int = len(bin(creases).replace('0b', ''))
+    def __init__(self, faces: List[Face], creases: int, folds: int, crease_amount: int):
+        self._crease_amount: int = crease_amount
         self._faces: List[Face] = faces
         self._creases: int = creases
+        self._folds: int = folds
         self.initialize_faces()
 
     def initialize_faces(self):
@@ -121,10 +167,24 @@ class Strip:
             current_coordinate = next_triangle_coordinate(current_coordinate, Direction.H)
 
     def is_simple_foldable(self) -> bool:
-        orders: List[Tuple] = list(permutations(range(self._crease_amount), self._crease_amount))
-        folded_strip: FoldedStrip = FoldedStrip(self, 0)
-        folded_strip.visualize_strip()
+        self.visualize_strip()
         return True
+
+    def fold_crease(self, index: int):
+        if self._folds & (1 << index):
+            raise Exception('Crease is already folded')
+        if index >= self._crease_amount:
+            raise ValueError('Invalid crease index: {} out of {}'.format(index, self._crease_amount))
+        crease: Tuple[Direction, int] = self.get_global_crease(index)
+        for face in range(index + 1, len(self._faces)):
+            self._faces[face].fold(*crease)
+        # Flip crease bit
+        self._folds = self._folds ^ (1 << index)
+
+    def get_global_crease(self, index: int) -> Tuple[Direction, int]:
+        if not (self._folds & (1 << index)):
+            return self._faces[index].get_last_crease()
+        raise Exception('Crease is already folded')
 
     def get_faces(self) -> Tuple:
         return tuple(self._faces)
@@ -132,18 +192,9 @@ class Strip:
     def __fold_creases(self, order: List[int]):
         pass
 
-
-class FoldedStrip:
-    def __init__(self, strip: Strip, folds: int):
-        self._strip: Strip = strip
-        self._folds: int = folds
-
-    def fold_crease(self):
-        pass
-
     def visualize_strip(self):
         grid: TriangleGrid = TriangleGrid()
-        for face in self._strip.get_faces():
+        for face in self.get_faces():
             for triangle in face.calculate_triangles():
                 if triangle in grid.grid:
                     t: Shape = grid.grid[triangle]
