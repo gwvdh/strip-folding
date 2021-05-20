@@ -1,6 +1,7 @@
 import unittest
 from typing import List
 from strip import is_upside_down, Strip, Face, Direction
+import random
 
 
 class MethodTests(unittest.TestCase):
@@ -26,12 +27,13 @@ class VisualizationTests(unittest.TestCase):
         self.assertTrue(strip.is_simple_foldable())
 
     def test_strip_crease_folds(self):
-        faces: List[Face] = [Face(3), Face(4), Face(1), Face(1), Face(5)]
+        amount_of_faces: int = 10
+        faces: List[Face] = [Face(random.randint(1, 10)) for i in range(amount_of_faces)]
         creases: int = int('0000', 2)
         folds: int = int('0000', 2)
-        strip: Strip = Strip(faces, creases, folds, 4)
-        strip.fold_crease(0)
-        strip.fold_crease(2)
-        strip.fold_crease(3)
+        strip: Strip = Strip(faces, creases, folds, amount_of_faces-1)
+        for i in range(amount_of_faces-1):
+            if random.randint(1, 2) == 2 or True:
+                strip.fold_crease(i)
         self.assertTrue(strip.is_simple_foldable())
 

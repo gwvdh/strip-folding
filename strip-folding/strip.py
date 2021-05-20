@@ -19,6 +19,12 @@ class Direction(Enum):
 
 
 def next_triangle_coordinate(current_coordinate: Tuple[int, int, int], direction: Direction) -> Tuple[int, int, int]:
+    """
+    Get the coordinates for the next triangle given the current_coordinate and the direction.
+    :param current_coordinate: The current coordinate
+    :param direction: The direction in which the next triangle is
+    :return: The next triangle from the current_coordinate in the given direction
+    """
     if direction == Direction.H:
         if is_upside_down(current_coordinate):
             current_coordinate = (current_coordinate[0] - 1, current_coordinate[1], current_coordinate[2] + 1)
@@ -171,10 +177,17 @@ class Strip:
         return True
 
     def fold_crease(self, index: int):
-        if self._folds & (1 << index):
-            raise Exception('Crease is already folded')
+        """
+        Fold the crease at index.
+        We fold the crease and transform all subsequent faces which are affected by the fold.
+
+        :param index: The index of the crease
+        :return:
+        """
         if index >= self._crease_amount:
             raise ValueError('Invalid crease index: {} out of {}'.format(index, self._crease_amount))
+        if self._folds & (1 << index):
+            raise Exception('Crease is already folded')
         crease: Tuple[Direction, int] = self.get_global_crease(index)
         for face in range(index + 1, len(self._faces)):
             self._faces[face].fold(*crease)
@@ -182,6 +195,13 @@ class Strip:
         self._folds = self._folds ^ (1 << index)
 
     def get_global_crease(self, index: int) -> Tuple[Direction, int]:
+        """
+        Get the global fold line of the crease at index.
+        From the strip, get the crease at index and return the direction and index of the global crease.
+
+        :param index: The index of the crease
+        :return: Global fold line direction and index
+        """
         if not (self._folds & (1 << index)):
             return self._faces[index].get_last_crease()
         raise Exception('Crease is already folded')
