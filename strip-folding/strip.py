@@ -274,9 +274,11 @@ class Strip:
         global_crease: Tuple[Direction, int] = self.get_global_crease(index)
         for face in range(index + 1, len(self._faces)):
             for coordinate in self._faces[face].get_coordinates():
-                up: bool = m_or_v
-
-        return False
+                face_object: Face = self._faces[face]
+                up: bool = coordinate_folds_up(coordinate, global_crease, bool(m_or_v), face_object)
+                if not self.__is_foldable_coordinate(coordinate, up, face_object):
+                    return False
+        return True
 
     def fold_crease(self, index: int):
         """
