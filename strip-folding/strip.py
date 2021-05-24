@@ -5,6 +5,11 @@ from enum import Enum
 from visualization import visualize_grid
 
 
+class FoldabilityError(Exception):
+    """Base class for foldability exceptions"""
+    pass
+
+
 def is_upside_down(triangle: Tuple[int, int, int]) -> bool:
     if triangle[2] - triangle[1] == triangle[0] and not (triangle[2] - triangle[1] == triangle[0] + 1 or
                                                          triangle[2] - triangle[1] == triangle[0] - 1):
@@ -242,7 +247,15 @@ class Strip:
                     self._layers[triangle] = []
                 self._layers[triangle].append(face)
 
-    def is_simple_foldable(self) -> bool:
+    def is_simple_foldable_order(self, crease_order: List[int]) -> bool:
+        for i in range(self._crease_amount):
+            if i not in crease_order:
+                raise ValueError('No complete order given: Missing {}'.format(i))
+        for crease in crease_order:
+            try:
+                self.simple_fold_crease(crease)
+            except FoldabilityError:
+                return False
         self.visualize_strip()
         return True
 
@@ -280,7 +293,7 @@ class Strip:
                     return False
         return True
 
-    def fold_crease(self, index: int):
+    def simple_fold_crease(self, index: int):
         """
         Fold the crease at index.
         We fold the crease and transform all subsequent faces which are affected by the fold.
@@ -292,11 +305,26 @@ class Strip:
             raise ValueError('Invalid crease index: {} out of {}'.format(index, self._crease_amount))
         if self._folds & (1 << index):
             raise Exception('Crease is already folded')
-        crease: Tuple[Direction, int] = self.get_global_crease(index)
-        for face in range(index + 1, len(self._faces)):
-            self._faces[face].fold(*crease)
-        # Flip crease bit
-        self._folds = self._folds ^ (1 << index)
+        m_or_v: int = self._creases & (1 << index)
+        if self.__crease_is_simple_foldable(index):
+            crease: Tuple[Direction, int] = self.get_global_crease(index)
+            for face in range(index + 1, len(self._faces)):
+                face_object: Face = self._faces[face]
+                for coordinate in face_object.get_coordinates():
+                    self._layers[coordinate].remove(face_object)
+                face_object.fold(*crease)
+                for coordinate in face_object.get_coordinates():
+                    if coordinate in self._layers:
+                        if coordinate_folds_up(coordinate, crease, bool(m_or_v), face_object):
+                            self._layers[coordinate].insert(0, face_object)
+                        else:
+                            self._layers[coordinate].append(face_object)
+                    else:
+                        self._layers[coordinate] = [face_object]
+            # Flip crease bit
+            self._folds = self._folds ^ (1 << index)
+        else:
+            raise FoldabilityError('Crease not simple foldable: crease {}'.format(index))
 
     def get_global_crease(self, index: int) -> Tuple[Direction, int]:
         """

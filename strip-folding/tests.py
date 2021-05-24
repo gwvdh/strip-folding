@@ -97,3 +97,14 @@ class VisualizationTests(unittest.TestCase):
         self.assertTrue(coordinate_folds_up(coordinate_h, global_crease_s, is_mountain_fold, face))
         self.assertFalse(coordinate_folds_up(coordinate_s, global_crease_s, is_mountain_fold, face))
 
+    def test_simple_foldable_order(self):
+        faces: List[Face] = (Face(2), Face(1), Face(1), Face(1))
+        creases: int = int('011', 2)
+        folds: int = int('000', 2)
+        strip: Strip = Strip(faces, creases, folds, 3)
+        self.assertFalse(strip.is_simple_foldable_order([0, 1, 2]))
+        faces: List[Face] = (Face(2), Face(1), Face(1), Face(1))
+        strip: Strip = Strip(faces, creases, folds, 3)
+        self.assertTrue(strip.is_simple_foldable_order([1, 2, 0]))
+
+
