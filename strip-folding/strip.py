@@ -1,4 +1,4 @@
-from typing import Tuple, List
+from typing import Tuple, List, Dict
 from grid import TriangleGrid, Shape
 from itertools import permutations
 from enum import Enum
@@ -21,6 +21,7 @@ class Direction(Enum):
 def next_triangle_coordinate(current_coordinate: Tuple[int, int, int], direction: Direction) -> Tuple[int, int, int]:
     """
     Get the coordinates for the next triangle given the current_coordinate and the direction.
+
     :param current_coordinate: The current coordinate
     :param direction: The direction in which the next triangle is
     :return: The next triangle from the current_coordinate in the given direction
@@ -44,10 +45,13 @@ def next_triangle_coordinate(current_coordinate: Tuple[int, int, int], direction
 
 
 class Face:
-    def __init__(self, length: int):
+    def __init__(self, length: int, direction: Direction = Direction.H):
         self._length: int = length
-        self._direction: Direction = Direction.H
+        self._direction: Direction = direction
         self._coordinates: List[Tuple[int, int, int]] = []
+
+    def get_direction(self) -> Direction:
+        return self._direction
 
     def get_last_crease(self) -> Tuple[Direction, int]:
         last_tuple: Tuple[int, int, int] = self._coordinates[-1]
@@ -98,6 +102,9 @@ class Face:
             current_coordinate = next_triangle_coordinate(current_coordinate, direction)
             self._coordinates.append(current_coordinate)
         return current_coordinate
+
+    def get_coordinates(self) -> List[Tuple[int, int, int]]:
+        return self._coordinates
 
     def fold(self, direction: Direction, index: int):
         """
@@ -158,23 +165,108 @@ class Face:
         return triangles
 
 
+def coordinate_folds_up(coordinate: Tuple[int, int, int],
+                        global_crease: Tuple[Direction, int],
+                        is_mountain_fold: bool,
+                        face: Face) -> bool:
+    face_direction: Direction = face.get_direction()
+    crease_direction, crease_index = global_crease
+    if crease_direction == Direction.H:
+        if face_direction == Direction.N:
+            if coordinate[0] != crease_index:
+                return is_mountain_fold and coordinate[0] < crease_index or \
+                       not is_mountain_fold and coordinate[0] > crease_index
+            else:
+                # H + N = S
+                return is_mountain_fold and coordinate[2] - coordinate[1] < crease_index or \
+                       not is_mountain_fold and coordinate[2] - coordinate[1] > crease_index
+        elif face_direction == Direction.S:
+            if coordinate[0] != crease_index:
+                return is_mountain_fold and coordinate[0] > crease_index or \
+                       not is_mountain_fold and coordinate[0] < crease_index
+            else:
+                # H + N = S
+                return is_mountain_fold and coordinate[2] - coordinate[1] > crease_index or \
+                       not is_mountain_fold and coordinate[2] - coordinate[1] < crease_index
+        else:
+            raise Exception('Invalid face direction: {}'.format(crease_direction))
+    elif crease_direction == Direction.N:
+        if face_direction == Direction.H:
+            pass
+        elif face_direction == Direction.S:
+            pass
+        else:
+            raise Exception('Invalid face direction: {}'.format(crease_direction))
+    elif crease_direction == Direction.S:
+        if face_direction == Direction.H:
+            pass
+        elif face_direction == Direction.N:
+            pass
+        else:
+            raise Exception('Invalid face direction: {}'.format(crease_direction))
+    else:
+        raise Exception('Invalid crease direction: {}'.format(crease_direction))
+
+
 class Strip:
     def __init__(self, faces: List[Face], creases: int, folds: int, crease_amount: int):
         self._crease_amount: int = crease_amount
         self._faces: List[Face] = faces
         self._creases: int = creases
         self._folds: int = folds
+        self._layers: Dict[Tuple[int, int, int], List[Face]] = {}
         self.initialize_faces()
 
     def initialize_faces(self):
+        """
+        Initialize the coordinates of the faces.
+
+        :return:
+        """
         current_coordinate: Tuple[int, int, int] = (0, 0, 1)
         for face in self._faces:
             current_coordinate = face.set_coordinates(current_coordinate, Direction.H)
             current_coordinate = next_triangle_coordinate(current_coordinate, Direction.H)
+            for triangle in face.get_coordinates():
+                if triangle not in self._layers:
+                    self._layers[triangle] = []
+                self._layers[triangle].append(face)
 
     def is_simple_foldable(self) -> bool:
         self.visualize_strip()
         return True
+
+    def __is_foldable_coordinate(self,
+                                 coordinate: Tuple[int, int, int],
+                                 up: bool,
+                                 face: Face) -> bool:
+        """
+        Given a coordinate, is it foldable in the given direction.
+
+        :param coordinate:
+        :param up:
+        :param face:
+        :return:
+        """
+        if face not in self._layers[coordinate]:
+            raise Exception('Coordinate not in a layer: {}'.format(coordinate))
+        return (up and self._layers[coordinate][-1] == face) or \
+               (not up and self._layers[coordinate][0] == face)
+
+    def __crease_is_simple_foldable(self, index: int) -> bool:
+        """
+        Can the given crease be simple folded?
+
+        :param index: Index of the crease
+        :return: Whether the crease can be simple folded
+        """
+        m_or_v: int = self._creases & (1 << index)
+        global_crease: Tuple[Direction, int] = self.get_global_crease(index)
+        for face in range(index + 1, len(self._faces)):
+            for coordinate in self._faces[face].get_coordinates():
+                up: bool = m_or_v
+
+        return False
 
     def fold_crease(self, index: int):
         """
@@ -213,6 +305,11 @@ class Strip:
         pass
 
     def visualize_strip(self):
+        """
+        Visualize the strip.
+
+        :return:
+        """
         grid: TriangleGrid = TriangleGrid()
         for face in self.get_faces():
             for triangle in face.calculate_triangles():
