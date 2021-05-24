@@ -46,6 +46,7 @@ class VisualizationTests(unittest.TestCase):
         with self.assertRaises(Exception):
             coordinate_folds_up(coordinate_1, global_crease_h, is_mountain_fold, face)
         face = Face(10, Direction.N)
+        # TODO: Check these, they might not be correct
         self.assertFalse(coordinate_folds_up(coordinate_1, global_crease_h, is_mountain_fold, face))
         self.assertTrue(coordinate_folds_up(coordinate_h, global_crease_h, is_mountain_fold, face))
         is_mountain_fold: bool = False

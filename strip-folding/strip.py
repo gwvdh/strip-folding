@@ -165,43 +165,53 @@ class Face:
         return triangles
 
 
+def coordinate_greater_than_crease(coordinate: Tuple[int, int, int], global_crease: Tuple[Direction, int]) -> bool:
+    crease_direction, crease_index = global_crease
+    if crease_direction == Direction.H:
+        if coordinate[0] != crease_index:
+            return coordinate[0] > crease_index
+        # Else: H = S - N
+        return coordinate[2] - coordinate[1] > crease_index
+    elif crease_direction == Direction.N:
+        if coordinate[1] != crease_index:
+            return coordinate[1] > crease_index
+        # Else: N = S - H
+        return coordinate[2] - coordinate[0] > crease_index
+    elif crease_direction == Direction.S:
+        if coordinate[2] != crease_index:
+            return coordinate[2] > crease_index
+        # Else: S = H + N
+        return coordinate[0] + coordinate[1] > crease_index
+    else:
+        raise Exception('Invalid crease direction: {}'.format(crease_direction))
+
+
 def coordinate_folds_up(coordinate: Tuple[int, int, int],
                         global_crease: Tuple[Direction, int],
                         is_mountain_fold: bool,
                         face: Face) -> bool:
     face_direction: Direction = face.get_direction()
     crease_direction, crease_index = global_crease
+    cgc: bool = coordinate_greater_than_crease(coordinate, global_crease)
     if crease_direction == Direction.H:
         if face_direction == Direction.N:
-            if coordinate[0] != crease_index:
-                return is_mountain_fold and coordinate[0] < crease_index or \
-                       not is_mountain_fold and coordinate[0] > crease_index
-            else:
-                # H + N = S
-                return is_mountain_fold and coordinate[2] - coordinate[1] < crease_index or \
-                       not is_mountain_fold and coordinate[2] - coordinate[1] > crease_index
+            return cgc != is_mountain_fold
         elif face_direction == Direction.S:
-            if coordinate[0] != crease_index:
-                return is_mountain_fold and coordinate[0] > crease_index or \
-                       not is_mountain_fold and coordinate[0] < crease_index
-            else:
-                # H + N = S
-                return is_mountain_fold and coordinate[2] - coordinate[1] > crease_index or \
-                       not is_mountain_fold and coordinate[2] - coordinate[1] < crease_index
+            return cgc == is_mountain_fold
         else:
             raise Exception('Invalid face direction: {}'.format(crease_direction))
     elif crease_direction == Direction.N:
         if face_direction == Direction.H:
-            pass
+            return cgc != is_mountain_fold
         elif face_direction == Direction.S:
-            pass
+            return cgc == is_mountain_fold
         else:
             raise Exception('Invalid face direction: {}'.format(crease_direction))
     elif crease_direction == Direction.S:
         if face_direction == Direction.H:
-            pass
+            return cgc != is_mountain_fold
         elif face_direction == Direction.N:
-            pass
+            return cgc == is_mountain_fold
         else:
             raise Exception('Invalid face direction: {}'.format(crease_direction))
     else:
