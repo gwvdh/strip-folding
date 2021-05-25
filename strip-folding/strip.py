@@ -69,6 +69,9 @@ class Face:
     def get_direction(self) -> Direction:
         return self._direction
 
+    def get_length(self) -> int:
+        return self._length
+
     def get_last_crease(self) -> Tuple[Direction, int]:
         last_tuple: Tuple[int, int, int] = self._coordinates[-1]
         if self._direction == Direction.H:
@@ -234,6 +237,17 @@ class Strip:
         self._layers: Dict[Tuple[int, int, int], List[Face]] = {}
         self.initialize_faces()
 
+    def get_strip_string(self) -> str:
+        result: str = ''
+        for face_index in range(len(self._faces)):
+            result = result + str(self._faces[face_index].get_length())
+            if face_index != len(self._faces) - 1:
+                if self._creases_base & (1 << face_index):
+                    result = result + 'M'
+                else:
+                    result = result + 'V'
+        return result
+
     def initialize_faces(self):
         """
         Initialize the coordinates of the faces.
@@ -255,23 +269,29 @@ class Strip:
         self._layers = {}
         self.initialize_faces()
 
-    def is_simple_foldable(self, visualization: bool = False) -> bool:
-        orders = list(permutations(range(0, self._crease_amount)))
-        for order in orders:
+    def is_simple_foldable(self, visualization: bool = False, animate: bool = False) -> bool:
+        # orders = list(permutations(range(0, self._crease_amount)))
+        for order in permutations(range(0, self._crease_amount)):
             self.reset_strip()
             if self.is_simple_foldable_order(list(order), visualization=False):
                 if visualization:
                     print('Found valid order: {}'.format(order))
-                    self.visualize_strip()
+                    self.visualize_strip(name=self.get_strip_string())
+                if animate:
+                    self.reset_strip()
+                    self.is_simple_foldable_order(list(order), animate=True)
                 return True
         return False
 
-    def is_simple_foldable_order(self, crease_order: List[int], visualization: bool = True) -> bool:
+    def is_simple_foldable_order(self, crease_order: List[int],
+                                 visualization: bool = True, animate: bool = False) -> bool:
         for i in range(self._crease_amount):
             if i not in crease_order:
                 raise ValueError('No complete order given: Missing {}'.format(i))
         for crease in crease_order:
             try:
+                if animate:
+                    self.visualize_strip(name=self.get_strip_string()+'_{}'.format(crease_order.index(crease)))
                 self.simple_fold_crease(crease)
             except FoldabilityError:
                 return False
@@ -449,7 +469,7 @@ class Strip:
     def __fold_creases(self, order: List[int]):
         pass
 
-    def visualize_strip(self):
+    def visualize_strip(self, name: str = 'visualization'):
         """
         Visualize the strip.
 
@@ -463,4 +483,4 @@ class Strip:
                     t.set_score(t.get_score() + 1)
                 else:
                     grid.add_triangle(*triangle)
-        visualize_grid(grid)
+        visualize_grid(grid, file_name=name)
