@@ -46,18 +46,18 @@ class VisualizationTests(unittest.TestCase):
         with self.assertRaises(Exception):
             coordinate_folds_up(coordinate_1, global_crease_h, is_mountain_fold, face)
         face = Face(10, Direction.N)
-        # TODO: Check these, they might not be correct
-        self.assertFalse(coordinate_folds_up(coordinate_1, global_crease_h, is_mountain_fold, face))
-        self.assertTrue(coordinate_folds_up(coordinate_h, global_crease_h, is_mountain_fold, face))
+        # Horizontal crease
+        self.assertTrue(coordinate_folds_up(coordinate_1, global_crease_h, is_mountain_fold, face))
+        self.assertFalse(coordinate_folds_up(coordinate_h, global_crease_h, is_mountain_fold, face))
         is_mountain_fold: bool = False
-        self.assertTrue(coordinate_folds_up(coordinate_1, global_crease_h, is_mountain_fold, face))
-        self.assertFalse(coordinate_folds_up(coordinate_h, global_crease_h, is_mountain_fold, face))
-        face = Face(10, Direction.S)
         self.assertFalse(coordinate_folds_up(coordinate_1, global_crease_h, is_mountain_fold, face))
         self.assertTrue(coordinate_folds_up(coordinate_h, global_crease_h, is_mountain_fold, face))
-        is_mountain_fold: bool = True
+        face = Face(10, Direction.S)
         self.assertTrue(coordinate_folds_up(coordinate_1, global_crease_h, is_mountain_fold, face))
         self.assertFalse(coordinate_folds_up(coordinate_h, global_crease_h, is_mountain_fold, face))
+        is_mountain_fold: bool = True
+        self.assertFalse(coordinate_folds_up(coordinate_1, global_crease_h, is_mountain_fold, face))
+        self.assertTrue(coordinate_folds_up(coordinate_h, global_crease_h, is_mountain_fold, face))
         # North crease
         face = Face(10, Direction.N)
         global_crease_n: Tuple[Direction, int] = (Direction.N, 0)
@@ -98,13 +98,17 @@ class VisualizationTests(unittest.TestCase):
         self.assertFalse(coordinate_folds_up(coordinate_s, global_crease_s, is_mountain_fold, face))
 
     def test_simple_foldable_order(self):
-        faces: List[Face] = (Face(2), Face(1), Face(1), Face(1))
-        creases: int = int('011', 2)
+        faces: List[Face] = [Face(2), Face(1), Face(1), Face(1)]
+        creases: int = int('110', 2)
         folds: int = int('000', 2)
         strip: Strip = Strip(faces, creases, folds, 3)
         self.assertFalse(strip.is_simple_foldable_order([0, 1, 2]))
-        faces: List[Face] = (Face(2), Face(1), Face(1), Face(1))
+        faces: List[Face] = [Face(2), Face(1), Face(1), Face(1)]
         strip: Strip = Strip(faces, creases, folds, 3)
         self.assertTrue(strip.is_simple_foldable_order([1, 2, 0]))
+        creases: int = int('001', 2)
+        faces: List[Face] = [Face(2), Face(1), Face(1), Face(1)]
+        strip: Strip = Strip(faces, creases, folds, 3)
+        self.assertFalse(strip.is_simple_foldable_order([0, 1, 2]))
 
 
