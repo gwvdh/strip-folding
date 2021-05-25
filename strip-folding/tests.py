@@ -111,4 +111,13 @@ class VisualizationTests(unittest.TestCase):
         strip: Strip = Strip(faces, creases, folds, 3)
         self.assertFalse(strip.is_simple_foldable_order([0, 1, 2]))
 
+    def test_simple_foldable_generator(self):
+        amount_of_faces: int = 10
+        max_face_length: int = 5
+        for i in range(1000):
+            faces: List[Face] = []
+            for face in range(amount_of_faces):
+                faces.append(Face(random.randint(1, max_face_length)))
+            strip: Strip = Strip(faces, random.randint(0, 2**(amount_of_faces - 1)), 0, amount_of_faces - 1)
+            self.assertTrue(strip.is_simple_foldable())
 

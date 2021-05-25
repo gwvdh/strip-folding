@@ -113,6 +113,7 @@ class Face:
         :return:
         """
         current_coordinate: Tuple[int, int, int] = start
+        self._direction = direction
         self._coordinates = [current_coordinate]
         for i in range(self._length - 1):
             current_coordinate = next_triangle_coordinate(current_coordinate, direction)
@@ -227,7 +228,9 @@ class Strip:
         self._crease_amount: int = crease_amount
         self._faces: List[Face] = faces
         self._creases: int = creases
+        self._creases_base: int = creases
         self._folds: int = folds
+        self._folds_base: int = folds
         self._layers: Dict[Tuple[int, int, int], List[Face]] = {}
         self.initialize_faces()
 
@@ -246,7 +249,24 @@ class Strip:
                     self._layers[triangle] = []
                 self._layers[triangle].append(face)
 
-    def is_simple_foldable_order(self, crease_order: List[int]) -> bool:
+    def reset_strip(self):
+        self._creases = self._creases_base
+        self._folds = self._folds_base
+        self._layers = {}
+        self.initialize_faces()
+
+    def is_simple_foldable(self, visualization: bool = False) -> bool:
+        orders = list(permutations(range(0, self._crease_amount)))
+        for order in orders:
+            self.reset_strip()
+            if self.is_simple_foldable_order(list(order), visualization=False):
+                if visualization:
+                    print('Found valid order: {}'.format(order))
+                    self.visualize_strip()
+                return True
+        return False
+
+    def is_simple_foldable_order(self, crease_order: List[int], visualization: bool = True) -> bool:
         for i in range(self._crease_amount):
             if i not in crease_order:
                 raise ValueError('No complete order given: Missing {}'.format(i))
@@ -255,7 +275,8 @@ class Strip:
                 self.simple_fold_crease(crease)
             except FoldabilityError:
                 return False
-        self.visualize_strip()
+        if visualization:
+            self.visualize_strip()
         return True
 
     def __is_foldable_coordinate(self,
