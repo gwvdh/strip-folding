@@ -73,7 +73,7 @@ def __show_save_visualization(show_vis: bool = True, save_vis: bool = True, vis_
         if not os.path.exists(f'figures/{folder_name}'):
             os.makedirs(f'figures/{folder_name}')
         # plt.title(vis_name)
-        plt.savefig(f'figures/{folder_name}/{vis_name}', dpi=300)
+        # plt.savefig(f'figures/{folder_name}/{vis_name}', dpi=300)
     if show_vis:
         if vis_name:
             plt.title(vis_name)

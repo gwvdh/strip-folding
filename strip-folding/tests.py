@@ -1,6 +1,7 @@
 import unittest
 from typing import List, Tuple
 from strip import is_upside_down, Strip, Face, Direction, coordinate_folds_up
+from data_processing import calculate_all_folds
 import random
 
 
@@ -112,7 +113,7 @@ class VisualizationTests(unittest.TestCase):
         self.assertFalse(strip.is_simple_foldable_order([0, 1, 2]))
 
     def test_simple_foldable_generator(self):
-        amount_of_faces: int = 15
+        amount_of_faces: int = 10
         max_face_length: int = 5
         iterations: int = 1000
         for i in range(iterations):
@@ -120,6 +121,12 @@ class VisualizationTests(unittest.TestCase):
             for face in range(amount_of_faces):
                 faces.append(Face(random.randint(1, max_face_length)))
             strip: Strip = Strip(faces, random.randint(0, 2**(amount_of_faces - 1)), 0, amount_of_faces - 1)
-            self.assertTrue(strip.is_simple_foldable(visualization=False, animate=True))
+            self.assertTrue(strip.is_simple_foldable(visualization=True, animate=False))
             print('{}/{}'.format(i, iterations))
+
+    def test_all_strips(self):
+        calculate_all_folds()
+
+
+
 

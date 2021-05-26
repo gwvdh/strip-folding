@@ -1,8 +1,10 @@
-from typing import Tuple, List, Dict, Set
+from typing import Tuple, List, Dict
 from grid import TriangleGrid, Shape
 from itertools import permutations
 from enum import Enum
 from visualization import visualize_grid
+import random
+from functools import reduce
 
 
 class FoldabilityError(Exception):
@@ -235,7 +237,14 @@ class Strip:
         self._folds: int = folds
         self._folds_base: int = folds
         self._layers: Dict[Tuple[int, int, int], List[Face]] = {}
+        self._json_data: Dict = {}
         self.initialize_faces()
+
+    def set_json_data(self, data):
+        self._json_data = data
+
+    def get_json_data(self) -> Dict:
+        return self._json_data
 
     def get_strip_string(self) -> str:
         result: str = ''
@@ -269,18 +278,50 @@ class Strip:
         self._layers = {}
         self.initialize_faces()
 
+    def _add_strip_to_database(self, order: List[int]):
+        self.sanitize_layers()
+        name: str = self.get_strip_string()
+        data = {'layers': {str(coordinate): [self._faces.index(face) for face in faces]
+                           for coordinate, faces in self._layers.items()},
+                'order': order
+                }
+        string_order = reduce(lambda a, b: a + str(b), order, '')
+        if name in self._json_data:
+            if string_order not in self._json_data[name]:
+                self._json_data[name][string_order] = data
+        else:
+            self._json_data[name] = {string_order: data}
+
+    def all_simple_folds(self):
+        orders: List[int] = list(range(0, self._crease_amount))
+        random.shuffle(orders)
+        for order in permutations(orders):
+            self.reset_strip()
+            if self.is_simple_foldable_order(list(order), visualization=False):
+                self._add_strip_to_database(list(order))
+                pass
+
+    def sanitize_layers(self):
+        self._layers = {k: v for k, v in self._layers.items() if len(v) > 0}
+
     def is_simple_foldable(self, visualization: bool = False, animate: bool = False) -> bool:
         # orders = list(permutations(range(0, self._crease_amount)))
-        for order in permutations(range(0, self._crease_amount)):
+        orders: List[int] = list(range(0, self._crease_amount))
+        random.shuffle(orders)
+        for order in permutations(orders):
             self.reset_strip()
             if self.is_simple_foldable_order(list(order), visualization=False):
                 if visualization:
-                    print('Found valid order: {}'.format(order))
-                    self.visualize_strip(name=self.get_strip_string())
+                    print(self.get_strip_string())
+                    print('Found valid order: {}'.format(list(order)))
+                    # self.visualize_strip(name=self.get_strip_string())
                 if animate:
                     self.reset_strip()
                     self.is_simple_foldable_order(list(order), animate=True)
+                self.sanitize_layers()
                 return True
+        print('No valid order: {}'.format(self.get_strip_string()))
+        self.sanitize_layers()
         return False
 
     def is_simple_foldable_order(self, crease_order: List[int],
@@ -422,14 +463,10 @@ class Strip:
                         self._layers[folded_coordinate] = layers_1 + self._layers[folded_coordinate]
                         self._layers[coordinate].extend(layers_2)
                 else:
-                    # print('Layer check One {}: {}'.format(coordinate, self._layers.get(coordinate, [])))
-                    # print('Layer check One {}: {}'.format(folded_coordinate, self._layers.get(folded_coordinate, [])))
                     layers_1: List[Face] = self.get_folding_layers(coordinate, index, up)
                     # Remove current layers form current and folded coordinate
                     for face in layers_1:
                         self._layers[coordinate].remove(face)
-                    # print('Layer check Two {}: {}'.format(coordinate, self._layers.get(coordinate, [])))
-                    # print('Layer check Two {}: {}'.format(folded_coordinate, self._layers.get(folded_coordinate, [])))
                     # Add current and folded coordinate to visited list
                     layers_1.reverse()
                     if folded_coordinate not in self._layers:
@@ -438,8 +475,6 @@ class Strip:
                         self._layers[folded_coordinate].extend(layers_1)
                     else:
                         self._layers[folded_coordinate] = layers_1 + self._layers[folded_coordinate]
-                    # print('Layer check Three {}: {}'.format(coordinate, self._layers.get(coordinate, [])))
-                    # print('Layer check Three {}: {}'.format(folded_coordinate, self._layers.get(folded_coordinate, [])))
         # Fold the faces
         for face_i in range(index + 1, len(self._faces)):
             self._faces[face_i].fold(*crease)
