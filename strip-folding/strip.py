@@ -237,14 +237,14 @@ class Strip:
         self._folds: int = folds
         self._folds_base: int = folds
         self._layers: Dict[Tuple[int, int, int], List[Face]] = {}
-        self._json_data: Dict = {}
+        self._db = {}
         self.initialize_faces()
 
-    def set_json_data(self, data):
-        self._json_data = data
+    def get_db(self):
+        return self._db
 
-    def get_json_data(self) -> Dict:
-        return self._json_data
+    def set_db(self, db):
+        self._db = db
 
     def get_strip_string(self) -> str:
         result: str = ''
@@ -286,11 +286,11 @@ class Strip:
                 'order': order
                 }
         string_order = reduce(lambda a, b: a + str(b), order, '')
-        if name in self._json_data:
-            if string_order not in self._json_data[name]:
-                self._json_data[name][string_order] = data
+        if name in self._db:
+            if string_order not in self._db[name]:
+                self._db[name][string_order] = data
         else:
-            self._json_data[name] = {string_order: data}
+            self._db[name] = {string_order: data}
 
     def all_simple_folds(self):
         orders: List[int] = list(range(0, self._crease_amount))
