@@ -12,6 +12,13 @@ class FoldabilityError(Exception):
     pass
 
 
+def transform_coordinate(coordinate: Tuple[int, int, int]) -> Tuple[int, int]:
+    if is_upside_down(coordinate):
+        return coordinate[1] + coordinate[2] - 1, coordinate[0] - 1
+    else:
+        return coordinate[1] + coordinate[2] - 1, coordinate[0]
+
+
 def is_upside_down(triangle: Tuple[int, int, int]) -> bool:
     if triangle[2] - triangle[1] == triangle[0] and not (triangle[2] - triangle[1] == triangle[0] + 1 or
                                                          triangle[2] - triangle[1] == triangle[0] - 1):
@@ -168,10 +175,7 @@ class Face:
         """
         triangles: List[Tuple[int, int]] = []
         for coordinate in self._coordinates:
-            if is_upside_down(coordinate):
-                triangles.append((coordinate[1] + coordinate[2] - 1, coordinate[0] - 1))
-            else:
-                triangles.append((coordinate[1] + coordinate[2] - 1, coordinate[0]))
+            triangles.append(transform_coordinate(coordinate))
         return triangles
 
 
@@ -307,18 +311,19 @@ class Strip:
     def is_simple_foldable(self, visualization: bool = False, animate: bool = False) -> bool:
         # orders = list(permutations(range(0, self._crease_amount)))
         orders: List[int] = list(range(0, self._crease_amount))
-        random.shuffle(orders)
         for order in permutations(orders):
+            random.shuffle(orders)
             self.reset_strip()
-            if self.is_simple_foldable_order(list(order), visualization=False):
+            if self.is_simple_foldable_order(list(orders), visualization=False):
                 if visualization:
                     print(self.get_strip_string())
-                    print('Found valid order: {}'.format(list(order)))
+                    print('Found valid order: {}'.format(list(orders)))
                     # self.visualize_strip(name=self.get_strip_string())
                 if animate:
                     self.reset_strip()
-                    self.is_simple_foldable_order(list(order), animate=True)
+                    self.is_simple_foldable_order(list(orders), animate=True)
                 self.sanitize_layers()
+                self._add_strip_to_database(orders)
                 return True
         print('No valid order: {}'.format(self.get_strip_string()))
         self.sanitize_layers()

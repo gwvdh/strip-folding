@@ -26,7 +26,8 @@ def merge_databases(new_database):
 def calculate_all_folds():
     database = {}
     merge_batch = 0
-    with tqdm(range(2195, 100000)) as progress_bar:
+    # with tqdm(range(126000, 200000)) as progress_bar:
+    with tqdm(range(10, 100)) as progress_bar:
         for f in progress_bar:
             s: str = str(f)
             if '0' not in s:
@@ -44,3 +45,18 @@ def calculate_all_folds():
                 merge_databases(database)
                 database = {}
     merge_databases(database)
+
+
+def calculate_some_fold(strip: str):
+    faces: List[Face] = []
+    creases: int = 0
+    for s in strip:
+        try:
+            length = int(s)
+            faces.append(Face(length))
+        except ValueError:
+            if s == 'M':
+                creases = creases ^ (1 << len(faces) - 1)
+    strip_object: Strip = Strip(faces, creases, 0, len(faces) - 1)
+    if strip_object.is_simple_foldable():
+        merge_databases(strip_object.get_db())

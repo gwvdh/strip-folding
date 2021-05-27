@@ -2,6 +2,7 @@ import unittest
 from typing import List, Tuple
 from strip import is_upside_down, Strip, Face, Direction, coordinate_folds_up
 from data_processing import calculate_all_folds
+from data_visualization import random_simple_foldable
 import random
 
 
@@ -127,6 +128,6 @@ class VisualizationTests(unittest.TestCase):
     def test_all_strips(self):
         calculate_all_folds()
 
-
-
+    def test_data_visualization(self):
+        random_simple_foldable('8V4M9V2M9M8M7M2M7V8M9V4M7M3V6M9')
 
