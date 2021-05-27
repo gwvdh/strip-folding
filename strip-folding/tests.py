@@ -129,5 +129,5 @@ class VisualizationTests(unittest.TestCase):
         calculate_all_folds()
 
     def test_data_visualization(self):
-        random_simple_foldable('8V4M9V2M9M8M7M2M7V8M9V4M7M3V6M9')
+        random_simple_foldable('8V4M8V2M8M8M6M2M7V8M9V4M7M3V6M9')
 
