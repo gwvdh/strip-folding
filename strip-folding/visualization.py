@@ -1,10 +1,11 @@
-from grid import Grid, TriangleGrid, Triangle
+from grid import Grid, Triangle
 from typing import Tuple, List, Dict
 import matplotlib.pyplot as plt
 from matplotlib.cm import get_cmap, ScalarMappable
 from matplotlib.colors import Normalize, LogNorm
 import numpy as np
 import os
+from folding_operations import transform_coordinate, is_upside_down
 
 
 def visualize_grid(grid: Grid, folder_name: str = '', file_name: str = 'visualization',
@@ -79,20 +80,6 @@ def __show_save_visualization(show_vis: bool = True, save_vis: bool = True, vis_
             plt.title(vis_name)
         plt.show()
     plt.close()
-
-
-def transform_coordinate(coordinate: Tuple[int, int, int]) -> Tuple[int, int]:
-    if is_upside_down(coordinate):
-        return coordinate[1] + coordinate[2] - 1, coordinate[0] - 1
-    else:
-        return coordinate[1] + coordinate[2] - 1, coordinate[0]
-
-
-def is_upside_down(triangle: Tuple[int, int, int]) -> bool:
-    if triangle[2] - triangle[1] == triangle[0] and not (triangle[2] - triangle[1] == triangle[0] + 1 or
-                                                         triangle[2] - triangle[1] == triangle[0] - 1):
-        raise ValueError
-    return triangle[2] - triangle[1] < triangle[0]
 
 
 def visualize_layers(layers: Dict[str, Dict[str, str]], order: str):
