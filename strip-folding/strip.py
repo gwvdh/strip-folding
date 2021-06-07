@@ -13,6 +13,13 @@ class FoldabilityError(Exception):
 
 
 def transform_coordinate(coordinate: Tuple[int, int, int]) -> Tuple[int, int]:
+    """
+    Transform a coordinate.
+    This is a transformation from global fold line coordinate system to a traditional 2d x,y system.
+
+    :param coordinate: the coordinate in global fold line coordinate system
+    :return: 2d x,y coordinates of the given coordinate
+    """
     if is_upside_down(coordinate):
         return coordinate[1] + coordinate[2] - 1, coordinate[0] - 1
     else:
@@ -20,6 +27,13 @@ def transform_coordinate(coordinate: Tuple[int, int, int]) -> Tuple[int, int]:
 
 
 def is_upside_down(triangle: Tuple[int, int, int]) -> bool:
+    """
+    Check if a triangle is upside down.
+    Check if the horizontal fold line is above the other fold lines.
+
+    :param triangle: the given triangle
+    :return: boolean whether the given triangle is upside down
+    """
     if triangle[2] - triangle[1] == triangle[0] and not (triangle[2] - triangle[1] == triangle[0] + 1 or
                                                          triangle[2] - triangle[1] == triangle[0] - 1):
         raise ValueError
@@ -41,9 +55,9 @@ def next_triangle_coordinate(current_coordinate: Tuple[int, int, int], direction
     """
     Get the coordinates for the next triangle given the current_coordinate and the direction.
 
-    :param current_coordinate: The current coordinate
-    :param direction: The direction in which the next triangle is
-    :return: The next triangle from the current_coordinate in the given direction
+    :param current_coordinate: the current coordinate
+    :param direction: the direction in which the next triangle is
+    :return: the next triangle from the current_coordinate in the given direction
     """
     if direction == Direction.H:
         if is_upside_down(current_coordinate):
@@ -64,6 +78,16 @@ def next_triangle_coordinate(current_coordinate: Tuple[int, int, int], direction
 
 
 def fold_coordinate(coordinate: Tuple[int, int, int], direction: Direction, index: int) -> Tuple[int, int, int]:
+    """
+    Fold a given coordinate.
+    Given a coordinate to be folded and a global fold line, fold the given coordinate around this fold line.
+    In this coordinate system we can find this by a simple transformation.
+
+    :param coordinate: The given coordinate to fold
+    :param direction: The direction of the global fold line
+    :param index: The index of the global fold line
+    :return: The coordinate of the folded triangle
+    """
     if direction == Direction.H:
         return 2 * index - coordinate[0], coordinate[2] - index, index + coordinate[1]
     elif direction == Direction.N:
@@ -87,6 +111,11 @@ class Face:
         return self._length
 
     def get_last_crease(self) -> Tuple[Direction, int]:
+        """
+        Get the global crease of the last triangle of this face
+
+        :return: Direction and index of the global crease of this face
+        """
         last_tuple: Tuple[int, int, int] = self._coordinates[-1]
         if self._direction == Direction.H:
             # H + N = S
@@ -185,6 +214,15 @@ class Face:
 
 
 def coordinate_greater_than_crease(coordinate: Tuple[int, int, int], global_crease: Tuple[Direction, int]) -> bool:
+    """
+    Given a global crease, check if the same direction crease in the coordinate is greater.
+    Every coordinate consists of the three global fold line directions of some index.
+    Check if the fold line in the coordinate is greater than the given one.
+
+    :param coordinate: Given coordinate
+    :param global_crease: Given the crease as a direction and index
+    :return: A boolean whether the given coordinate is greater than the given crease.
+    """
     crease_direction, crease_index = global_crease
     if crease_direction == Direction.H:
         if coordinate[0] != crease_index:
@@ -209,6 +247,20 @@ def coordinate_folds_up(coordinate: Tuple[int, int, int],
                         global_crease: Tuple[Direction, int],
                         is_mountain_fold: bool,
                         face: Face) -> bool:
+    """
+    Check whether a given coordinate folds up.
+    If a crease is folded, the relative position of a coordinate to that crease
+    determines whether the coordinate folds up or down.
+    The crease is either mountain or valley.
+    The direction of the face containing the coordinate influences the direction
+    since it influences which side of the crease is up or down with respect to the crease being mountain or valley.
+
+    :param coordinate: the given coordinate
+    :param global_crease: the global crease
+    :param is_mountain_fold: boolean whether global_crease is a mountain or valley fold
+    :param face: the face of the global crease
+    :return: boolean whether the coordinate folds up
+    """
     face_direction: Direction = face.get_direction()
     crease_direction, crease_index = global_crease
     cgc: bool = coordinate_greater_than_crease(coordinate, global_crease)
@@ -306,6 +358,14 @@ class Strip:
         self.initialize_faces()
 
     def _add_strip_to_database(self, order: List[int]):
+        """
+        Add the strip order to the database.
+        Database is structures as (for coordinate (0, 0, 1) with order [1, 2, 3] with face order [1,2,3,4]):
+        { '0|0|1': {'1|2|3': '1|2|3|4'} }
+
+        :param order: order in which the creases are folded
+        :return:
+        """
         self.sanitize_layers()
         order_string: str = reduce_int_list(order)
         for coord, faces in self._layers.items():
@@ -318,6 +378,11 @@ class Strip:
                 self._db[coordinate][order_string] = reduce_int_list([self._faces.index(face) for face in faces])
 
     def all_simple_folds(self) -> bool:
+        """
+        Go over all possible orders in which to fold this strip and add it to the database
+
+        :return:
+        """
         orders: List[int] = list(range(0, self._crease_amount))
         random.shuffle(orders)
         found_valid_foldable_order: bool = False
@@ -333,10 +398,21 @@ class Strip:
         self._layers = {k: v for k, v in self._layers.items() if len(v) > 0}
 
     def is_simple_foldable(self, visualization: bool = False, animate: bool = False) -> bool:
+        """
+        Check whether the strip is simple foldable.
+        Randomly get some order and check whether it is simple foldable.
+        This does not guarantee a correct answer.
+        Remove randomization to go brute force for a real answer.
+
+
+        :param visualization: Whether we want to visualize the strip
+        :param animate: Whether we want to animate the folding sequence
+        :return: boolean whether the strip is simple foldable
+        """
         # orders = list(permutations(range(0, self._crease_amount)))
         orders: List[int] = list(range(0, self._crease_amount))
         for order in permutations(orders):
-            random.shuffle(orders)
+            random.shuffle(orders) # Remove this to find a definitive answer
             self.reset_strip()
             if self.is_simple_foldable_order(list(orders), visualization=False):
                 if visualization:
@@ -355,6 +431,14 @@ class Strip:
 
     def is_simple_foldable_order(self, crease_order: List[int],
                                  visualization: bool = True, animate: bool = False) -> bool:
+        """
+        Check whether the given folding order of the creases is valid for simple folding.
+
+        :param crease_order: The order in which to fold the creases
+        :param visualization: Whether we want to visualize the strip
+        :param animate: Whether we want to animate the folding sequence
+        :return:
+        """
         for i in range(self._crease_amount):
             if i not in crease_order:
                 raise ValueError('No complete order given: Missing {}'.format(i))
@@ -404,6 +488,16 @@ class Strip:
         return list(dict.fromkeys(coordinates))
 
     def get_folding_layers(self, coordinate: Tuple[int, int, int], crease_index: int, up: bool) -> List[Face]:
+        """
+        Get the layers which are to be folded for the given coordinate.
+        Find the faces which will fold in the given direction.
+        We assume this is possible, otherwise we raise an exception.
+
+        :param coordinate: the coordinate to be folded
+        :param crease_index: the index of the crease (to find subsequent faces)
+        :param up: whether the coordinate folds up or down
+        :return: a list of faces which are folded
+        """
         layers: List[Face] = self._layers[coordinate]
         if len(layers) == 0:
             raise Exception('No layers: {}'.format(layers))
@@ -433,6 +527,16 @@ class Strip:
                               crease_index: int,
                               up: bool,
                               folded_coordinate_exists: bool):
+        """
+        Fold the layers to the new coordinate.
+
+        :param coordinate: the coordinate to be folded
+        :param folded_coordinate: the coordinate of the folded location
+        :param crease_index: the index of the folded crease
+        :param up: boolean whether the coordinate is folded up or down
+        :param folded_coordinate_exists: boolean indicating the existence of the folded coordinate
+        :return: 
+        """
         if folded_coordinate_exists:
             layers_1: List[Face] = self.get_folding_layers(coordinate, crease_index, up)
             layers_2: List[Face] = self.get_folding_layers(folded_coordinate, crease_index, not up)

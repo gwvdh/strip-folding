@@ -4,6 +4,12 @@ import json
 
 
 def random_simple_foldable(strip: str):
+    """
+    Visualize a random order of the given strip
+
+    :param strip: strip in string representation
+    :return:
+    """
     conn, cur = open_database()
     print('Database opened')
     # for strip, s in data.iteritems():

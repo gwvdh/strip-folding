@@ -7,11 +7,15 @@ from sqlitedict import SqliteDict
 from tqdm import tqdm
 import sqlite3
 
-DICTDATABASE_PATH: str = 'output/dict_database_2.db'
+DICT_DATABASE_PATH: str = 'output/dict_database_2.db'
 DATABASE_PATH: str = 'output/database_3.db'
 
 
 def open_database():
+    """
+    Open the database and return the connection and cursor of the SQLite database
+    :return:
+    """
     con = sqlite3.connect(DATABASE_PATH)
     cur = con.cursor()
     cur.execute('''CREATE TABLE IF NOT EXISTS strips
@@ -27,13 +31,20 @@ def open_database():
 
 
 def insert_data(data, cursor):
+    """
+    Insert the given data into the SQLite database.
+
+    :param data: tuple of data
+    :param cursor: cursor of the SQLite database
+    :return:
+    """
     sql = '''INSERT INTO strips(strip_name, len, n_creases, M_creases, creases, crease_direction, layers) 
              VALUES(?, ?, ?, ?, ?, ?, ?)'''
     cursor.execute(sql, data)
 
 
 def open_dict_database():
-    return SqliteDict(DICTDATABASE_PATH, autocommit=True)
+    return SqliteDict(DICT_DATABASE_PATH, autocommit=True)
 
 
 def merge_databases(new_database):
@@ -48,6 +59,11 @@ def merge_databases(new_database):
 
 
 def calculate_all_folds_strip_length():
+    """
+    Calculate all possible strips of some lengths.
+
+    :return:
+    """
     connection, cur = open_database()
     merge_batch = 0
     for length in range(11, 12):
@@ -136,19 +152,49 @@ def construct_global_order(layers: Dict[Tuple[int, int, int], List[int]]):
     """
     adjacency_dict: Dict[int, Set[int]] = {}
     for _, layer_list in layers.items():
-        previous: int = None
+        previous: int = -1
         for layer in layer_list:
             if layer not in adjacency_dict:
                 adjacency_dict[layer] = set()
-            if previous is not None:
+            if previous != -1:
                 adjacency_dict[layer].add(previous)
                 adjacency_dict[layer] = adjacency_dict[layer].union(adjacency_dict[previous])
             previous = layer
     return adjacency_dict
 
 
+def same_order(orders: List[str], layer_dict: Dict[str, List[int]]) -> List[List[str]]:
+    order_lists: List[List[str]] = []
+    for order_1 in orders:
+        for order_2 in orders:
+            if layer_dict[order_1] == layer_dict[order_2]:
+                found_group: bool = False
+                for order_list in order_lists:
+                    if order_1 not in order_list and order_2 in order_list:
+                        order_list.append(order_1)
+                        found_group = True
+                        break
+                if not found_group:
+                    order_lists.append([order_1])
+    return order_lists
+
+
 def analyze_states():
-    database = open_database()
+    """
+    Create a new dataset for all the folded states per strip
+
+    :return:
+    """
+    connection, cur = open_database()
+    # Get strips
+    cur.execute(f'SELECT * FROM strips')
+    for row in cur:
+        print(row)
+        json_object = {}  # TODO: add json object from row
+        for _, order_layers in json_object.items():
+            for order_str, layers in order_layers.items():
+                order = order_str
+                break
     # Create states
     states = {
         'amount': 0,
@@ -208,7 +254,13 @@ def visualize_order_amount():
     return True
 
 
-def get_strip_from_str(strip: str):
+def get_strip_from_str(strip: str) -> Strip:
+    """
+    Transform a string representation of a strip into a strip object
+
+    :param strip: string representing a strip
+    :return: strip object of the strip string
+    """
     faces: List[Face] = []
     creases: int = 0
     for s in strip:
@@ -230,7 +282,3 @@ def fold_least_crease(strip: str) -> bool:
     fold_order: List[int] = list(map(lambda creases: creases[0], strip_scores))
     print(fold_order)
     return strip_object.is_simple_foldable_order(fold_order, visualization=False)
-
-
-def flip_strategy(strip: str) -> bool:
-    strip_object: Strip = get_strip_from_str(strip)
