@@ -1,9 +1,10 @@
 import unittest
 from typing import List, Tuple
-from strip import is_upside_down, Strip, Face, Direction, coordinate_folds_up
+from strip import Strip, Face
 from data_processing import calculate_all_folds, \
-    analyze_database, fold_least_crease, flip_strategy, \
+    analyze_database, fold_least_crease, \
     get_strip_from_str, visualize_order_amount, calculate_all_folds_strip_length
+from folding_operations import is_upside_down, Direction, coordinate_folds_up
 from data_visualization import random_simple_foldable
 import random
 
@@ -48,58 +49,58 @@ class VisualizationTests(unittest.TestCase):
         global_crease_h: Tuple[Direction, int] = (Direction.H, 0)
         is_mountain_fold: bool = True
         with self.assertRaises(Exception):
-            coordinate_folds_up(coordinate_1, global_crease_h, is_mountain_fold, face)
+            coordinate_folds_up(coordinate_1, global_crease_h, is_mountain_fold, face.get_direction())
         face = Face(10, Direction.N)
         # Horizontal crease
-        self.assertTrue(coordinate_folds_up(coordinate_1, global_crease_h, is_mountain_fold, face))
-        self.assertFalse(coordinate_folds_up(coordinate_h, global_crease_h, is_mountain_fold, face))
+        self.assertTrue(coordinate_folds_up(coordinate_1, global_crease_h, is_mountain_fold, face.get_direction()))
+        self.assertFalse(coordinate_folds_up(coordinate_h, global_crease_h, is_mountain_fold, face.get_direction()))
         is_mountain_fold: bool = False
-        self.assertFalse(coordinate_folds_up(coordinate_1, global_crease_h, is_mountain_fold, face))
-        self.assertTrue(coordinate_folds_up(coordinate_h, global_crease_h, is_mountain_fold, face))
+        self.assertFalse(coordinate_folds_up(coordinate_1, global_crease_h, is_mountain_fold, face.get_direction()))
+        self.assertTrue(coordinate_folds_up(coordinate_h, global_crease_h, is_mountain_fold, face.get_direction()))
         face = Face(10, Direction.S)
-        self.assertTrue(coordinate_folds_up(coordinate_1, global_crease_h, is_mountain_fold, face))
-        self.assertFalse(coordinate_folds_up(coordinate_h, global_crease_h, is_mountain_fold, face))
+        self.assertTrue(coordinate_folds_up(coordinate_1, global_crease_h, is_mountain_fold, face.get_direction()))
+        self.assertFalse(coordinate_folds_up(coordinate_h, global_crease_h, is_mountain_fold, face.get_direction()))
         is_mountain_fold: bool = True
-        self.assertFalse(coordinate_folds_up(coordinate_1, global_crease_h, is_mountain_fold, face))
-        self.assertTrue(coordinate_folds_up(coordinate_h, global_crease_h, is_mountain_fold, face))
+        self.assertFalse(coordinate_folds_up(coordinate_1, global_crease_h, is_mountain_fold, face.get_direction()))
+        self.assertTrue(coordinate_folds_up(coordinate_h, global_crease_h, is_mountain_fold, face.get_direction()))
         # North crease
         face = Face(10, Direction.N)
         global_crease_n: Tuple[Direction, int] = (Direction.N, 0)
         coordinate_n: Tuple[int, int, int] = (1, 0, 0)
         is_mountain_fold: bool = True
         with self.assertRaises(Exception):
-            coordinate_folds_up(coordinate_1, global_crease_n, is_mountain_fold, face)
+            coordinate_folds_up(coordinate_1, global_crease_n, is_mountain_fold, face.get_direction())
         face = Face(10, Direction.H)
-        self.assertFalse(coordinate_folds_up(coordinate_1, global_crease_n, is_mountain_fold, face))
-        self.assertTrue(coordinate_folds_up(coordinate_n, global_crease_n, is_mountain_fold, face))
+        self.assertFalse(coordinate_folds_up(coordinate_1, global_crease_n, is_mountain_fold, face.get_direction()))
+        self.assertTrue(coordinate_folds_up(coordinate_n, global_crease_n, is_mountain_fold, face.get_direction()))
         is_mountain_fold: bool = False
-        self.assertTrue(coordinate_folds_up(coordinate_1, global_crease_n, is_mountain_fold, face))
-        self.assertFalse(coordinate_folds_up(coordinate_n, global_crease_n, is_mountain_fold, face))
+        self.assertTrue(coordinate_folds_up(coordinate_1, global_crease_n, is_mountain_fold, face.get_direction()))
+        self.assertFalse(coordinate_folds_up(coordinate_n, global_crease_n, is_mountain_fold, face.get_direction()))
         face = Face(10, Direction.S)
-        self.assertFalse(coordinate_folds_up(coordinate_1, global_crease_n, is_mountain_fold, face))
-        self.assertTrue(coordinate_folds_up(coordinate_n, global_crease_n, is_mountain_fold, face))
+        self.assertFalse(coordinate_folds_up(coordinate_1, global_crease_n, is_mountain_fold, face.get_direction()))
+        self.assertTrue(coordinate_folds_up(coordinate_n, global_crease_n, is_mountain_fold, face.get_direction()))
         is_mountain_fold: bool = True
-        self.assertTrue(coordinate_folds_up(coordinate_1, global_crease_n, is_mountain_fold, face))
-        self.assertFalse(coordinate_folds_up(coordinate_n, global_crease_n, is_mountain_fold, face))
+        self.assertTrue(coordinate_folds_up(coordinate_1, global_crease_n, is_mountain_fold, face.get_direction()))
+        self.assertFalse(coordinate_folds_up(coordinate_n, global_crease_n, is_mountain_fold, face.get_direction()))
         # South crease
         face = Face(10, Direction.S)
         global_crease_s: Tuple[Direction, int] = (Direction.S, 0)
         coordinate_s: Tuple[int, int, int] = (-1, 0, 0)
         is_mountain_fold: bool = True
         with self.assertRaises(Exception):
-            coordinate_folds_up(coordinate_h, global_crease_s, is_mountain_fold, face)
+            coordinate_folds_up(coordinate_h, global_crease_s, is_mountain_fold, face.get_direction())
         face = Face(10, Direction.H)
-        self.assertFalse(coordinate_folds_up(coordinate_h, global_crease_s, is_mountain_fold, face))
-        self.assertTrue(coordinate_folds_up(coordinate_s, global_crease_s, is_mountain_fold, face))
+        self.assertFalse(coordinate_folds_up(coordinate_h, global_crease_s, is_mountain_fold, face.get_direction()))
+        self.assertTrue(coordinate_folds_up(coordinate_s, global_crease_s, is_mountain_fold, face.get_direction()))
         is_mountain_fold: bool = False
-        self.assertTrue(coordinate_folds_up(coordinate_h, global_crease_s, is_mountain_fold, face))
-        self.assertFalse(coordinate_folds_up(coordinate_s, global_crease_s, is_mountain_fold, face))
+        self.assertTrue(coordinate_folds_up(coordinate_h, global_crease_s, is_mountain_fold, face.get_direction()))
+        self.assertFalse(coordinate_folds_up(coordinate_s, global_crease_s, is_mountain_fold, face.get_direction()))
         face = Face(10, Direction.N)
-        self.assertFalse(coordinate_folds_up(coordinate_h, global_crease_s, is_mountain_fold, face))
-        self.assertTrue(coordinate_folds_up(coordinate_s, global_crease_s, is_mountain_fold, face))
+        self.assertFalse(coordinate_folds_up(coordinate_h, global_crease_s, is_mountain_fold, face.get_direction()))
+        self.assertTrue(coordinate_folds_up(coordinate_s, global_crease_s, is_mountain_fold, face.get_direction()))
         is_mountain_fold: bool = True
-        self.assertTrue(coordinate_folds_up(coordinate_h, global_crease_s, is_mountain_fold, face))
-        self.assertFalse(coordinate_folds_up(coordinate_s, global_crease_s, is_mountain_fold, face))
+        self.assertTrue(coordinate_folds_up(coordinate_h, global_crease_s, is_mountain_fold, face.get_direction()))
+        self.assertFalse(coordinate_folds_up(coordinate_s, global_crease_s, is_mountain_fold, face.get_direction()))
 
     def test_simple_foldable_order(self):
         faces: List[Face] = [Face(2), Face(1), Face(1), Face(1)]
@@ -158,9 +159,6 @@ class VisualizationTests(unittest.TestCase):
 
     def test_least_strategy(self):
         self.test_strategy(fold_least_crease)
-
-    def test_flip_strategy(self):
-        self.test_strategy(flip_strategy)
 
     def test_analyze_database(self):
         self.assertTrue(visualize_order_amount())
