@@ -95,15 +95,13 @@ def is_upside_down(triangle: Tuple[int, int, int]) -> bool:
     return triangle[2] - triangle[1] < triangle[0]
 
 
-def visualize_layers(layers: Dict[Tuple[int, int, int], List[int]]):
+def visualize_layers(layers: Dict[str, Dict[str, str]], order: str):
     min_x: int = 1000000
     max_x: int = -1000000
     min_y: int = 1000000
     max_y: int = -1000000
     for coordinate, _ in layers.items():
-        coordinate = coordinate.replace('(', '')
-        coordinate = coordinate.replace(')', '')
-        coordinate = coordinate.split(', ')
+        coordinate = coordinate.split('|')
         coordinate = tuple([int(c) for c in coordinate])
         x, y = transform_coordinate(coordinate)
         min_x = min(min_x, x)
@@ -111,42 +109,40 @@ def visualize_layers(layers: Dict[Tuple[int, int, int], List[int]]):
         min_y = min(min_y, y)
         max_y = max(max_y, y)
     lines: List = []
-    for coordinate, order in layers.items():
-        coordinate = coordinate.replace('(', '')
-        coordinate = coordinate.replace(')', '')
-        coordinate = coordinate.split(', ')
+    for coordinate, orders in layers.items():
+        coordinate = coordinate.split('|')
         coordinate = tuple([int(c) for c in coordinate])
-        top_face: int = order[-1]
+        top_face: int = int(orders.get(order).split('|')[-1])
         coordinate_list = Triangle(*transform_coordinate(coordinate)).get_coordinates(1.0)
         if is_upside_down(coordinate):
-            left_top = layers.get(str((coordinate[0] - 1, coordinate[1] - 1, coordinate[2])))
-            if left_top is None or left_top[-1] != top_face:
+            left_top = layers.get(f'{coordinate[0]-1}|{coordinate[1]-1}|{coordinate[2]}')
+            if left_top is None or int(left_top.get(order).split('|')[-1]) != top_face:
                 lines.append((coordinate_list[0][0], coordinate_list[1][0]))
                 lines.append((coordinate_list[0][1], coordinate_list[1][1]))
                 # plt.plot((coordinate_list[0][0]), coordinate_list[1])
-            right_top = layers.get(str((coordinate[0] - 1, coordinate[1], coordinate[2] + 1)))
-            if right_top is None or right_top[-1] != top_face:
+            right_top = layers.get(f'{coordinate[0]-1}|{coordinate[1]}|{coordinate[2]+1}')
+            if right_top is None or int(right_top.get(order).split('|')[-1]) != top_face:
                 lines.append((coordinate_list[2][0], coordinate_list[1][0]))
                 lines.append((coordinate_list[2][1], coordinate_list[1][1]))
                 # plt.plot(coordinate_list[2], coordinate_list[1])
-            up_top = layers.get(str((coordinate[0], coordinate[1] - 1, coordinate[2] + 1)))
-            if up_top is None or up_top[-1] != top_face:
+            up_top = layers.get(f'{coordinate[0]}|{coordinate[1]-1}|{coordinate[2]+1}')
+            if up_top is None or int(up_top.get(order).split('|')[-1]) != top_face:
                 lines.append((coordinate_list[0][0], coordinate_list[2][0]))
                 lines.append((coordinate_list[0][1], coordinate_list[2][1]))
                 # plt.plot(coordinate_list[0], coordinate_list[2])
         else:
-            left_top = layers.get(str((coordinate[0] + 1, coordinate[1], coordinate[2] - 1)))
-            if left_top is None or left_top[-1] != top_face:
+            left_top = layers.get(f'{coordinate[0]+1}|{coordinate[1]}|{coordinate[2]-1}')
+            if left_top is None or int(left_top.get(order).split('|')[-1]) != top_face:
                 lines.append((coordinate_list[0][0], coordinate_list[1][0]))
                 lines.append((coordinate_list[0][1], coordinate_list[1][1]))
                 # plt.plot(coordinate_list[0], coordinate_list[1])
-            right_top = layers.get(str((coordinate[0] + 1, coordinate[1] + 1, coordinate[2])))
-            if right_top is None or right_top[-1] != top_face:
+            right_top = layers.get(f'{coordinate[0]+1}|{coordinate[1]+1}|{coordinate[2]}')
+            if right_top is None or int(right_top.get(order).split('|')[-1]) != top_face:
                 lines.append((coordinate_list[2][0], coordinate_list[1][0]))
                 lines.append((coordinate_list[2][1], coordinate_list[1][1]))
                 # plt.plot(coordinate_list[2], coordinate_list[1])
-            up_top = layers.get(str((coordinate[0], coordinate[1] + 1, coordinate[2] - 1)))
-            if up_top is None or up_top[-1] != top_face:
+            up_top = layers.get(f'{coordinate[0]}|{coordinate[1]+1}|{coordinate[2]-1}')
+            if up_top is None or int(up_top.get(order).split('|')[-1]) != top_face:
                 lines.append((coordinate_list[0][0], coordinate_list[2][0]))
                 lines.append((coordinate_list[0][1], coordinate_list[2][1]))
                 # plt.plot(coordinate_list[0], coordinate_list[2])

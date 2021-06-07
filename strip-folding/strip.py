@@ -32,6 +32,11 @@ class Direction(Enum):
     S = 2
 
 
+def reduce_int_list(ls: List[int]) -> str:
+    order_string: str = reduce(lambda a, b: a + f'{b}|', ls, '')
+    return order_string[:-1]
+
+
 def next_triangle_coordinate(current_coordinate: Tuple[int, int, int], direction: Direction) -> Tuple[int, int, int]:
     """
     Get the coordinates for the next triangle given the current_coordinate and the direction.
@@ -244,6 +249,24 @@ class Strip:
         self._db = {}
         self.initialize_faces()
 
+    def get_length(self) -> int:
+        length = 0
+        for face in self._faces:
+            length += face.get_length()
+        return length
+
+    def get_crease_amount(self) -> int:
+        return self._crease_amount
+
+    def get_original_creases(self) -> int:
+        return self._creases_base
+
+    def get_original_folds(self) -> int:
+        return self._folds_base
+
+    def get_n_mountain_folds(self) -> int:
+        return bin(self._creases_base).count('1')
+
     def get_db(self):
         return self._db
 
@@ -284,26 +307,27 @@ class Strip:
 
     def _add_strip_to_database(self, order: List[int]):
         self.sanitize_layers()
-        name: str = self.get_strip_string()
-        data = {'layers': {str(coordinate): [self._faces.index(face) for face in faces]
-                           for coordinate, faces in self._layers.items()},
-                'order': order
+        order_string: str = reduce_int_list(order)
+        for coord, faces in self._layers.items():
+            coordinate: str = f'{coord[0]}|{coord[1]}|{coord[2]}'
+            if coordinate not in self._db:
+                self._db[coordinate] = {
+                    order_string: reduce_int_list([self._faces.index(face) for face in faces])
                 }
-        string_order = reduce(lambda a, b: a + str(b), order, '')
-        if name in self._db:
-            if string_order not in self._db[name]:
-                self._db[name][string_order] = data
-        else:
-            self._db[name] = {string_order: data}
+            else:
+                self._db[coordinate][order_string] = reduce_int_list([self._faces.index(face) for face in faces])
 
-    def all_simple_folds(self):
+    def all_simple_folds(self) -> bool:
         orders: List[int] = list(range(0, self._crease_amount))
         random.shuffle(orders)
+        found_valid_foldable_order: bool = False
         for order in permutations(orders):
             self.reset_strip()
             if self.is_simple_foldable_order(list(order), visualization=False):
                 self._add_strip_to_database(list(order))
+                found_valid_foldable_order = True
                 pass
+        return found_valid_foldable_order
 
     def sanitize_layers(self):
         self._layers = {k: v for k, v in self._layers.items() if len(v) > 0}
@@ -367,23 +391,6 @@ class Strip:
                 return False
         return True
 
-    def __crease_is_simple_foldable(self, index: int) -> bool:
-        """
-        Can the given crease be simple folded?
-
-        :param index: Index of the crease
-        :return: Whether the crease can be simple folded
-        """
-        m_or_v: int = self._creases & (1 << index)
-        global_crease: Tuple[Direction, int] = self.get_global_crease(index)
-        face_object: Face = self._faces[index + 1]
-        for face in range(index + 1, len(self._faces)):
-            for coordinate in self._faces[face].get_coordinates():
-                up: bool = coordinate_folds_up(coordinate, global_crease, bool(m_or_v), face_object)
-                if not self.__is_foldable_coordinate(coordinate, up, index + 1):
-                    return False
-        return True
-
     def __get_all_subsequent_face_coordinates(self, face_index: int) -> List[Tuple[int, int, int]]:
         """
         Get all coordinates which are from a given face or subsequent faces.
@@ -420,6 +427,43 @@ class Strip:
                 folding_layers.append(layers[layer])
             return folding_layers
 
+    def __fold_layer_ordering(self,
+                              coordinate,
+                              folded_coordinate,
+                              crease_index: int,
+                              up: bool,
+                              folded_coordinate_exists: bool):
+        if folded_coordinate_exists:
+            layers_1: List[Face] = self.get_folding_layers(coordinate, crease_index, up)
+            layers_2: List[Face] = self.get_folding_layers(folded_coordinate, crease_index, not up)
+            # Remove current layers form current and folded coordinate
+            for face in layers_1:
+                self._layers[coordinate].remove(face)
+            for face in layers_2:
+                self._layers[folded_coordinate].remove(face)
+            # Add current and folded coordinate to visited list
+            layers_1.reverse()
+            layers_2.reverse()
+            if up:
+                self._layers[folded_coordinate].extend(layers_1)
+                self._layers[coordinate] = layers_2 + self._layers[coordinate]
+            else:
+                self._layers[folded_coordinate] = layers_1 + self._layers[folded_coordinate]
+                self._layers[coordinate].extend(layers_2)
+        else:
+            layers_1: List[Face] = self.get_folding_layers(coordinate, crease_index, up)
+            # Remove current layers form current and folded coordinate
+            for face in layers_1:
+                self._layers[coordinate].remove(face)
+            # Add current and folded coordinate to visited list
+            layers_1.reverse()
+            if folded_coordinate not in self._layers:
+                self._layers[folded_coordinate] = []
+            if up:
+                self._layers[folded_coordinate].extend(layers_1)
+            else:
+                self._layers[folded_coordinate] = layers_1 + self._layers[folded_coordinate]
+
     def simple_fold_crease(self, index: int):
         """
         Fold the crease at index.
@@ -432,9 +476,6 @@ class Strip:
             raise ValueError('Invalid crease index: {} out of {}'.format(index, self._crease_amount))
         if self._folds & (1 << index):
             raise Exception('Crease is already folded')
-        if not self.__crease_is_simple_foldable(index):
-            raise FoldabilityError('Crease not simple foldable: crease {}'.format(index))
-        # print('Faces: {}'.format(self._faces))
         m_or_v: int = self._creases & (1 << index)
         all_coordinates: List[Tuple[int, int, int]] = self.__get_all_subsequent_face_coordinates(index + 1)
         visited_coordinates: List[Tuple[int, int, int]] = []
@@ -445,41 +486,20 @@ class Strip:
                 # Find the folded coordinate
                 folded_coordinate: Tuple[int, int, int] = fold_coordinate(coordinate, *crease)
                 up: bool = coordinate_folds_up(coordinate, crease, bool(m_or_v), self._faces[index + 1])
+
+                if not self.__is_foldable_coordinate(coordinate, up, index + 1):
+                    raise FoldabilityError('Crease not simple foldable: crease {}'.format(index))
+                folded_coordinate_exists: bool = folded_coordinate in all_coordinates
+                if folded_coordinate_exists and not self.__is_foldable_coordinate(folded_coordinate, not up, index + 1):
+                    raise FoldabilityError('Crease not simple foldable: crease {}'.format(index))
+                #
                 # Add the coordinates to the visited list
                 visited_coordinates.append(coordinate)
                 visited_coordinates.append(folded_coordinate)
+                #
                 # Put layers in the correct order in the folded coordinate
                 #   If the folded coordinate already existed, also do it for the folded coordinate to current coordinate
-                if folded_coordinate in all_coordinates:
-                    layers_1: List[Face] = self.get_folding_layers(coordinate, index, up)
-                    layers_2: List[Face] = self.get_folding_layers(folded_coordinate, index, not up)
-                    # Remove current layers form current and folded coordinate
-                    for face in layers_1:
-                        self._layers[coordinate].remove(face)
-                    for face in layers_2:
-                        self._layers[folded_coordinate].remove(face)
-                    # Add current and folded coordinate to visited list
-                    layers_1.reverse()
-                    layers_2.reverse()
-                    if up:
-                        self._layers[folded_coordinate].extend(layers_1)
-                        self._layers[coordinate] = layers_2 + self._layers[coordinate]
-                    else:
-                        self._layers[folded_coordinate] = layers_1 + self._layers[folded_coordinate]
-                        self._layers[coordinate].extend(layers_2)
-                else:
-                    layers_1: List[Face] = self.get_folding_layers(coordinate, index, up)
-                    # Remove current layers form current and folded coordinate
-                    for face in layers_1:
-                        self._layers[coordinate].remove(face)
-                    # Add current and folded coordinate to visited list
-                    layers_1.reverse()
-                    if folded_coordinate not in self._layers:
-                        self._layers[folded_coordinate] = []
-                    if up:
-                        self._layers[folded_coordinate].extend(layers_1)
-                    else:
-                        self._layers[folded_coordinate] = layers_1 + self._layers[folded_coordinate]
+                self.__fold_layer_ordering(coordinate, folded_coordinate, index, up, folded_coordinate_exists)
         # Fold the faces
         for face_i in range(index + 1, len(self._faces)):
             self._faces[face_i].fold(*crease)

@@ -1,7 +1,9 @@
 import unittest
 from typing import List, Tuple
 from strip import is_upside_down, Strip, Face, Direction, coordinate_folds_up
-from data_processing import calculate_all_folds
+from data_processing import calculate_all_folds, \
+    analyze_database, fold_least_crease, flip_strategy, \
+    get_strip_from_str, visualize_order_amount, calculate_all_folds_strip_length
 from data_visualization import random_simple_foldable
 import random
 
@@ -126,8 +128,40 @@ class VisualizationTests(unittest.TestCase):
             print('{}/{}'.format(i, iterations))
 
     def test_all_strips(self):
-        calculate_all_folds()
+        self.assertTrue(calculate_all_folds())
+
+    def test_all_strips_by_length(self):
+        self.assertTrue(calculate_all_folds_strip_length())
 
     def test_data_visualization(self):
-        random_simple_foldable('8V4M8V2M8M8M6M2M7V8M9V4M7M3V6M9')
+        strip_length: int = 49
+        strip: str = f'{random.randint(1, 9)}'
+        for i in range(strip_length):
+            strip += f'{random.choice(["M", "V"])}{random.randint(1, 9)}'
+        print(f'Try string: {strip}')
+        strip = '5V3V2V3V5'
+        # strip = '1V1V3M3V2V1'
+        # strip = '6V6V6V6M6'
+        # strip_object = get_strip_from_str(strip)
+        # self.assertTrue(strip_object.is_simple_foldable_order([4, 2, 1, 3, 0], visualization=False))
+        random_simple_foldable(strip)
+
+    def test_strategy(self, strategy):
+        for j in range(1000):
+            strip_length: int = 9
+            strip: str = f'{random.randint(1, 9)}'
+            for i in range(strip_length):
+                strip += f'{random.choice(["M", "V"])}{random.randint(1, 9)}'
+            print(f'Try string: {strip}')
+            self.assertTrue(strategy(strip))
+            print('---------- Success ----------')
+
+    def test_least_strategy(self):
+        self.test_strategy(fold_least_crease)
+
+    def test_flip_strategy(self):
+        self.test_strategy(flip_strategy)
+
+    def test_analyze_database(self):
+        self.assertTrue(visualize_order_amount())
 
