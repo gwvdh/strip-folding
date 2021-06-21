@@ -1,9 +1,10 @@
 import unittest
 from typing import List, Tuple
 from strip import Strip, Face
-from data_processing import calculate_all_folds, \
+from data_processing import calculate_all_folds, analyze_states, \
     analyze_database, fold_least_crease, \
-    get_strip_from_str, visualize_order_amount, calculate_all_folds_strip_length
+    get_strip_from_str, visualize_order_amount, calculate_all_folds_strip_length, \
+    test_if_consecutive_exists, find_any_cycle, analyze_same_crease_patterns
 from folding_operations import is_upside_down, Direction, coordinate_folds_up
 from data_visualization import random_simple_foldable
 import random
@@ -140,9 +141,10 @@ class VisualizationTests(unittest.TestCase):
         for i in range(strip_length):
             strip += f'{random.choice(["M", "V"])}{random.randint(1, 9)}'
         print(f'Try string: {strip}')
-        strip = '5V3V2V3V5'
+        # strip = '5V3V2V3V5'
         # strip = '1V1V3M3V2V1'
         # strip = '6V6V6V6M6'
+        strip = '3V3V4'
         # strip_object = get_strip_from_str(strip)
         # self.assertTrue(strip_object.is_simple_foldable_order([4, 2, 1, 3, 0], visualization=False))
         random_simple_foldable(strip)
@@ -163,3 +165,14 @@ class VisualizationTests(unittest.TestCase):
     def test_analyze_database(self):
         self.assertTrue(visualize_order_amount())
 
+    def test_states(self):
+        analyze_states()
+
+    def test_consecutive(self):
+        self.assertTrue(test_if_consecutive_exists())
+
+    def test_find_cycle(self):
+        self.assertFalse(find_any_cycle())
+
+    def test_crease_types(self):
+        self.assertTrue(analyze_same_crease_patterns())

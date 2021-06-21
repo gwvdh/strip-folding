@@ -96,11 +96,16 @@ def visualize_layers(layers: Dict[str, Dict[str, str]], order: str):
         min_y = min(min_y, y)
         max_y = max(max_y, y)
     lines: List = []
+    fig = plt.figure(figsize=[10, 9])
+    ax = fig.add_axes([0, 0, 1, 1])
     for coordinate, orders in layers.items():
         coordinate = coordinate.split('|')
         coordinate = tuple([int(c) for c in coordinate])
         top_face: int = int(orders.get(order).split('|')[-1])
         coordinate_list = Triangle(*transform_coordinate(coordinate)).get_coordinates(1.0)
+        if (top_face % 2) == 1:
+            shape = plt.Polygon(coordinate_list, facecolor='grey')
+            ax.add_patch(shape)
         if is_upside_down(coordinate):
             left_top = layers.get(f'{coordinate[0]-1}|{coordinate[1]-1}|{coordinate[2]}')
             if left_top is None or int(left_top.get(order).split('|')[-1]) != top_face:
@@ -133,8 +138,6 @@ def visualize_layers(layers: Dict[str, Dict[str, str]], order: str):
                 lines.append((coordinate_list[0][0], coordinate_list[2][0]))
                 lines.append((coordinate_list[0][1], coordinate_list[2][1]))
                 # plt.plot(coordinate_list[0], coordinate_list[2])
-    fig = plt.figure(figsize=[10, 9])
-    ax = fig.add_axes([0, 0, 1, 1])
     ax.axis('equal')
     ax.plot(*lines, color='black')
     plt.show()
