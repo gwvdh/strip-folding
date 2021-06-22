@@ -487,3 +487,22 @@ class Strip:
                 else:
                     grid.add_triangle(*triangle)
         visualize_grid(grid, file_name=name)
+
+
+def get_strip_from_str(strip: str) -> Strip:
+    """
+    Transform a string representation of a strip into a strip object
+
+    :param strip: string representing a strip
+    :return: strip object of the strip string
+    """
+    faces: List[Face] = []
+    creases: int = 0
+    for s in strip:
+        try:
+            length = int(s)
+            faces.append(Face(length))
+        except ValueError:
+            if s == 'M':
+                creases = creases ^ (1 << len(faces) - 1)
+    return Strip(faces, creases, 0, len(faces) - 1)

@@ -1,63 +1,13 @@
 from typing import List, Dict, Tuple, Set
-from strip import Strip, Face
+from strip import Strip, Face, get_strip_from_str
+from database_tools import open_database, insert_data, open_dict_database, merge_databases
 import json
 import matplotlib.pyplot as plt
 import matplotlib.colors as mcl
-from sqlitedict import SqliteDict
 from tqdm import tqdm
-import sqlite3
 from functools import reduce
 import re
-
-DICT_DATABASE_PATH: str = 'output/dict_database_2.db'
-DATABASE_PATH: str = 'output/database_3.db'
-
-
-def open_database():
-    """
-    Open the database and return the connection and cursor of the SQLite database
-    :return:
-    """
-    con = sqlite3.connect(DATABASE_PATH)
-    cur = con.cursor()
-    cur.execute('''CREATE TABLE IF NOT EXISTS strips
-                   (strip_name text, 
-                   len INTEGER, 
-                   n_creases INTEGER, 
-                   M_creases INTEGER, 
-                   creases INTEGER, 
-                   crease_direction INTEGER,
-                   layers text)'''
-                )
-    return con, cur
-
-
-def insert_data(data, cursor):
-    """
-    Insert the given data into the SQLite database.
-
-    :param data: tuple of data
-    :param cursor: cursor of the SQLite database
-    :return:
-    """
-    sql = '''INSERT INTO strips(strip_name, len, n_creases, M_creases, creases, crease_direction, layers) 
-             VALUES(?, ?, ?, ?, ?, ?, ?)'''
-    cursor.execute(sql, data)
-
-
-def open_dict_database():
-    return SqliteDict(DICT_DATABASE_PATH, autocommit=True)
-
-
-def merge_databases(new_database):
-    old_database = open_dict_database()
-    for strip, order_data in new_database.items():
-        if strip in old_database:
-            for order, data in order_data.items():
-                if order not in old_database[strip]:
-                    old_database[strip][order] = data
-        else:
-            old_database[strip] = order_data
+from itertools import starmap
 
 
 def calculate_all_folds_strip_length():
@@ -275,7 +225,7 @@ def analyze_states_length_intersection():
     # 1V1M1M1V1M1V1M1M1
     for j in range(int('11010110', 2), int('11010111', 2)):
         name = ''
-        base: Set[str] = []
+        base: Set[str] = set()
         for i in range(7, 11):
             cur.execute(f'SELECT strip_name, layers, M_creases, len, n_creases, n_states, crease_direction '
                         f'FROM strips WHERE len=? AND crease_direction=? AND n_creases=?', (i, j, 8))
@@ -425,25 +375,6 @@ def visualize_order_amount():
     return True
 
 
-def get_strip_from_str(strip: str) -> Strip:
-    """
-    Transform a string representation of a strip into a strip object
-
-    :param strip: string representing a strip
-    :return: strip object of the strip string
-    """
-    faces: List[Face] = []
-    creases: int = 0
-    for s in strip:
-        try:
-            length = int(s)
-            faces.append(Face(length))
-        except ValueError:
-            if s == 'M':
-                creases = creases ^ (1 << len(faces) - 1)
-    return Strip(faces, creases, 0, len(faces) - 1)
-
-
 def fold_least_crease(strip: str) -> bool:
     strip_object: Strip = get_strip_from_str(strip)
     strip_scores: List[Tuple[int, int]] = []
@@ -463,20 +394,16 @@ def analyze_up_to_10(strip: str):
         pass
 
 
-def create_new_column():
-    connection, cur = open_database()
-    # Get strips
-    # cur.execute(f'ALTER TABLE strips ADD COLUMN crease_type INTEGER')
-
-
 def is_subset_of(strip_1: str, strip_2: str) -> bool:
+    if strip_2 == strip_1:
+        return False
     face_lengths_1: List[str] = re.split('[A-Z]', strip_1)
     face_lengths_2: List[str] = re.split('[A-Z]', strip_2)
-    face_lengths: List[int] = list(map(lambda a, b: int(a) - int(b), zip(face_lengths_1, face_lengths_2)))
+    face_lengths: List[int] = list(starmap(lambda a, b: int(a) - int(b), zip(face_lengths_1, face_lengths_2)))
     for length in face_lengths:
-        if length < 0:
-            print(f'{strip_2} subset of {strip_1}')
+        if length > 0:
             return False
+    # print(f'{strip_2} subset of {strip_1}')
     return True
 
 
@@ -484,10 +411,11 @@ def analyze_same_crease_patterns():
     connection, cur = open_database()
     # Get strips
     print('Start analysis')
-    for n_creases in range(4, 11):
+    for n_creases in range(4, 5):
         print('-1-')
-        for crease_type in range(5, 2**n_creases):
-            for crease_assignment in range(6, 2**n_creases):
+        for crease_type in range(5, 6):
+            for crease_assignment in range(2**n_creases):
+                order_dict: Dict[str, Set[str]] = {}
                 minimum_orders: Set[str] = set()
                 orders: Set[str] = set()
                 print(f'Analyze: {n_creases} {crease_type}')
@@ -497,6 +425,7 @@ def analyze_same_crease_patterns():
                 # cur.execute(f'SELECT * FROM strips')
                 for row in cur:
                     json_object = json.loads(row[1])
+                    order_dict[row[0]] = get_all_orders(json_object)
                     if len(minimum_orders) == 0:
                         minimum_orders = get_all_orders(json_object)
                     if len(orders) == 0:
@@ -504,10 +433,10 @@ def analyze_same_crease_patterns():
                     else:
                         orders = get_order_intersection(json_object, orders)
                     minimum_intersection = get_order_intersection(json_object, minimum_orders)
-                    print(f'Minimum intersection: {minimum_intersection}')
+                    # print(f'Minimum intersection: {minimum_intersection}')
                     orders_print = list(orders)
                     orders_print.sort()
-                    print(f'{row[0]}: {orders_print}')
+                    # print(f'{row[0]}: {orders_print}')
                     if len(minimum_intersection) == 0:
                         print(f'Not intersecting: {row[0]}')
                         print(f'N_creases: {n_creases}, crease type: {crease_type}, '
@@ -519,6 +448,31 @@ def analyze_same_crease_patterns():
                               f'crease assignment: {crease_assignment}')
                         # return False
                 print(orders)
+                lattice: Dict[str, List[str]] = {}
+                for strip_1 in order_dict:
+                    lattice[strip_1] = []
+                    for strip_2 in order_dict:
+                        if strip_2 != strip_1 and is_subset_of(strip_2, strip_1):
+                            lattice[strip_1].append(strip_2)
+                    print(f'{strip_1}: {lattice[strip_1]}')
+                for strip, adj in lattice.items():
+                    intersection: Set[str] = reduce(lambda a, b: a.intersection(order_dict[b]), adj, order_dict[strip])
+                    print(f'Intersection {strip}: {intersection}')
+                    if len(intersection) == 0:
+                        return False
+                for ele, adj in lattice.items():
+                    to_remove = []
+                    for strip in adj:
+                        to_remove.extend(lattice[strip])
+                    for strip in to_remove:
+                        try:
+                            lattice[ele].remove(strip)
+                        except ValueError:
+                            pass
+                print(f'Lattice: {lattice}')
+                for strip, fold_orders in order_dict.items():
+                    print(f'{strip}: {fold_orders}')
+                # return True
     return True
 
 
