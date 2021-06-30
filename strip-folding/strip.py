@@ -6,6 +6,7 @@ from folding_operations import FoldabilityError, Direction, transform_coordinate
     next_triangle_coordinate, fold_coordinate, coordinate_folds_up
 import random
 from functools import reduce
+from copy import deepcopy
 
 
 def reduce_int_list(ls: List[int]) -> str:
@@ -140,6 +141,9 @@ class Strip:
         self._db = {}
         self.initialize_faces()
 
+    def get_layers(self) -> Dict[Tuple[int, int, int], List[Face]]:
+        return deepcopy(self._layers)
+
     def get_length(self) -> int:
         length = 0
         for face in self._faces:
@@ -268,12 +272,13 @@ class Strip:
         self.sanitize_layers()
         return False
 
-    def is_simple_foldable_order(self, crease_order: List[int],
+    def is_simple_foldable_order(self, crease_order: List[int], one_way_fold: bool = False,
                                  visualization: bool = True, animate: bool = False) -> bool:
         """
         Check whether the given folding order of the creases is valid for simple folding.
 
         :param crease_order: The order in which to fold the creases
+        :param one_way_fold: only allow folds which move everything one way
         :param visualization: Whether we want to visualize the strip
         :param animate: Whether we want to animate the folding sequence
         :return:
@@ -285,12 +290,30 @@ class Strip:
             try:
                 if animate:
                     self.visualize_strip(name=self.get_strip_string()+'_{}'.format(crease_order.index(crease)))
+                if one_way_fold and self.__folds_two_ways(crease):
+                    return False
                 self.simple_fold_crease(crease)
             except FoldabilityError:
                 return False
         if visualization:
             self.visualize_strip()
         return True
+
+    def __folds_two_ways(self, crease_index: int) -> bool:
+        all_coordinates: List[Tuple[int, int, int]] = self.__get_all_subsequent_face_coordinates(crease_index + 1)
+        crease_direction, crease = self.get_global_crease(crease_index)
+        m_or_v: bool = bool(self._creases & (1 << crease_index))
+        face_direction: Direction = self._faces[crease_index + 1].get_direction()
+        up: bool = False
+        down: bool = False
+        for coordinate in all_coordinates:
+            folds_up: bool = coordinate_folds_up(coordinate=coordinate, face_direction=face_direction,
+                                                 global_crease=(crease_direction, crease), is_mountain_fold=m_or_v)
+            up = up or folds_up
+            down = down or not folds_up
+            if up and down:
+                return True
+        return False
 
     def __is_foldable_coordinate(self,
                                  coordinate: Tuple[int, int, int],

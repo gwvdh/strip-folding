@@ -4,7 +4,8 @@ from strip import Strip, Face
 from data_processing import calculate_all_folds, analyze_states, \
     analyze_database, fold_least_crease, \
     get_strip_from_str, visualize_order_amount, calculate_all_folds_strip_length, \
-    test_if_consecutive_exists, find_any_cycle, analyze_same_crease_patterns
+    test_if_consecutive_exists, find_any_cycle, analyze_same_crease_patterns, \
+    analyze_no_two_direction_fold
 from folding_operations import is_upside_down, Direction, coordinate_folds_up
 from data_visualization import random_simple_foldable
 import random
@@ -176,3 +177,6 @@ class VisualizationTests(unittest.TestCase):
 
     def test_crease_types(self):
         self.assertTrue(analyze_same_crease_patterns())
+
+    def test_no_two_way_fold(self):
+        self.assertTrue(analyze_no_two_direction_fold())

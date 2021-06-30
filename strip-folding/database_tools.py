@@ -33,8 +33,8 @@ def insert_data(data, cursor):
     :param cursor: cursor of the SQLite database
     :return:
     """
-    sql = '''INSERT INTO strips(strip_name, len, n_creases, M_creases, creases, crease_direction, layers) 
-             VALUES(?, ?, ?, ?, ?, ?, ?)'''
+    sql = 'INSERT INTO strips(strip_name, len, n_creases, M_creases, creases, crease_direction, layers) ' \
+          'VALUES(?, ?, ?, ?, ?, ?, ?)'
     cursor.execute(sql, data)
 
 
@@ -51,10 +51,3 @@ def merge_databases(new_database):
                     old_database[strip][order] = data
         else:
             old_database[strip] = order_data
-
-
-def create_new_column():
-    connection, cur = open_database()
-    # Get strips
-    # cur.execute(f'ALTER TABLE strips ADD COLUMN crease_type INTEGER')
-

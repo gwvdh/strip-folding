@@ -166,7 +166,8 @@ def get_all_orders(orders: Dict[str, Dict[str, str]]) -> Set[str]:
     all_orders: Set[str] = set()
     for _, layers in orders.items():
         for order in layers:
-            all_orders.add(order)
+            if len(order) > 0:
+                all_orders.add(order)
         break
     return all_orders
 
@@ -269,7 +270,7 @@ def analyze_states():
     connection, cur = open_database()
     # Get strips
     cur.execute(f'SELECT strip_name, layers, M_creases, len, n_creases, n_states, crease_direction '
-                f'FROM strips WHERE len=?', (4,))
+                f'FROM strips WHERE crease_direction=?', (0, ))
     write_cursor = connection.cursor()
     n_states = []
     n_orders = []
@@ -287,7 +288,7 @@ def analyze_states():
         orders = row[5]
         # print(f'Strip {row[0]}: {row[1]}')
         json_object = json.loads(row[1])
-        print(f'{row[0]}: {json_object}')
+        # print(f'{row[0]}: {json_object}')
         all_orders: List[str] = []
         for _, order_layers in json_object.items():
             for order_str, layers in order_layers.items():
@@ -499,4 +500,27 @@ def insert_same_crease_patterns():
     return True
 
 
+def get_order_from_str(order: str) -> List[int]:
+    return list(map(lambda x: int(x), order.split('|')))
 
+
+def analyze_no_two_direction_fold():
+    connection, cur = open_database()
+    # Get strips
+    cur.execute(f'SELECT strip_name, layers, len, n_creases, crease_direction FROM strips')
+    for row in cur:
+        print(f'Testing strip: {row[0]}')
+        json_object = json.loads(row[1])
+        orders: Set[str] = get_all_orders(json_object)
+        if len(orders) > 0:
+            strip: Strip = get_strip_from_str(row[0])
+            found_one_way_order: bool = False
+            for order in orders:
+                if strip.is_simple_foldable_order(get_order_from_str(order), one_way_fold=True, visualization=False):
+                    found_one_way_order = True
+                    break
+                strip.reset_strip()
+            if not found_one_way_order:
+                print(f'Found unfoldable strip: {row[0]}')
+                return False
+    return True
