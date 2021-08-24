@@ -9,6 +9,11 @@ from functools import reduce
 from copy import deepcopy
 
 
+class StripError(Exception):
+    """Base class for strip exceptions"""
+    pass
+
+
 def reduce_int_list(ls: List[int]) -> str:
     order_string: str = reduce(lambda a, b: a + f'{b}|', ls, '')
     return order_string[:-1]
@@ -16,6 +21,8 @@ def reduce_int_list(ls: List[int]) -> str:
 
 class Face:
     def __init__(self, length: int, direction: Direction = Direction.H):
+        if length < 1:
+            raise StripError(f'Invalid face length: {length}')
         self._length: int = length
         self._direction: Direction = direction
         self._coordinates: List[Tuple[int, int, int]] = []
@@ -247,15 +254,14 @@ class Strip:
         This does not guarantee a correct answer.
         Remove randomization to go brute force for a real answer.
 
-
         :param visualization: Whether we want to visualize the strip
         :param animate: Whether we want to animate the folding sequence
         :return: boolean whether the strip is simple foldable
         """
         # orders = list(permutations(range(0, self._crease_amount)))
         orders: List[int] = list(range(0, self._crease_amount))
-        for order in permutations(orders):
-            random.shuffle(orders) # Remove this to find a definitive answer
+        for _ in permutations(orders):
+            random.shuffle(orders)  # Remove this to find a definitive answer
             self.reset_strip()
             if self.is_simple_foldable_order(list(orders), visualization=False):
                 if visualization:
@@ -521,11 +527,45 @@ def get_strip_from_str(strip: str) -> Strip:
     """
     faces: List[Face] = []
     creases: int = 0
+    current_face_length: str = ''
+    counter: int = 0
     for s in strip:
-        try:
-            length = int(s)
-            faces.append(Face(length))
-        except ValueError:
+        if s.isnumeric():
+            current_face_length += s
+        if not s.isnumeric() or counter == len(strip) - 1:
+            face_length: int = int(current_face_length)
+            if int(face_length) < 1:
+                raise StripError(f'Invalid face length: {current_face_length}')
+            faces.append(Face(face_length))
+            current_face_length = ''
             if s == 'M':
                 creases = creases ^ (1 << len(faces) - 1)
+        counter += 1
     return Strip(faces, creases, 0, len(faces) - 1)
+
+
+def construct_strip_str(length: int, creases: int, mv_assignment: int) -> str:
+    """
+    Construct the strip string from integer information.
+    :param length: Length of the strip
+    :param creases: Creases in binary format
+    :param mv_assignment: Mountain and valley assignment in binary format
+    :return:
+    """
+    if length < 1:
+        raise StripError("Invalid strip length")
+    if creases > 2 ** length:
+        raise StripError("Invalid creases")
+    if mv_assignment > 2 ** bin(creases).count('1'):
+        raise StripError("Invalid M/V assignment")
+    face_length: int = 1
+    crease_i: int = 0
+    strip_str: str = ''
+    for i in range(length - 1):
+        if creases & (1 << i):
+            strip_str += f'{face_length}{"M" if mv_assignment & (1 << crease_i) else "V"}'
+            face_length = 0
+            crease_i += 1
+        face_length += 1
+    strip_str += str(face_length)
+    return strip_str

@@ -1,11 +1,10 @@
 import unittest
 from typing import List, Tuple
 from strip import Strip, Face
-from data_processing import calculate_all_folds, analyze_states, \
-    analyze_database, fold_least_crease, \
-    get_strip_from_str, visualize_order_amount, calculate_all_folds_strip_length, \
+from data_processing import analyze_states, fold_least_crease_strategy, \
+    visualize_order_amount, calculate_all_folds_strip_length, \
     test_if_consecutive_exists, find_any_cycle, analyze_same_crease_patterns, \
-    analyze_no_two_direction_fold
+    analyze_no_two_direction_fold, analyze_strip, analyze_stamp_folding
 from folding_operations import is_upside_down, Direction, coordinate_folds_up
 from data_visualization import random_simple_foldable
 import random
@@ -28,20 +27,20 @@ class VisualizationTests(unittest.TestCase):
         faces: List[Face] = [Face(3), Face(4), Face(1), Face(1), f1]
         creases: int = int('1000', 2)
         folds: int = int('0000', 2)
-        strip: Strip = Strip(faces, creases, folds)
+        strip: Strip = Strip(faces, creases, folds, 0)
         f1.fold(Direction.S, 5)
         f1.fold(Direction.H, 0)
         self.assertTrue(strip.is_simple_foldable())
 
     def test_strip_crease_folds(self):
         amount_of_faces: int = 10
-        faces: List[Face] = [Face(random.randint(1, 10)) for i in range(amount_of_faces)]
+        faces: List[Face] = [Face(random.randint(1, 10)) for _ in range(amount_of_faces)]
         creases: int = int('0000', 2)
         folds: int = int('0000', 2)
         strip: Strip = Strip(faces, creases, folds, amount_of_faces-1)
         for i in range(amount_of_faces-1):
             if random.randint(1, 2) == 2 or True:
-                strip.fold_crease(i)
+                strip.simple_fold_crease(i)
         self.assertTrue(strip.is_simple_foldable())
 
     def test_coordinate_direction(self):
@@ -130,9 +129,6 @@ class VisualizationTests(unittest.TestCase):
             self.assertTrue(strip.is_simple_foldable(visualization=True, animate=False))
             print('{}/{}'.format(i, iterations))
 
-    def test_all_strips(self):
-        self.assertTrue(calculate_all_folds())
-
     def test_all_strips_by_length(self):
         self.assertTrue(calculate_all_folds_strip_length())
 
@@ -149,6 +145,7 @@ class VisualizationTests(unittest.TestCase):
         # strip_object = get_strip_from_str(strip)
         # self.assertTrue(strip_object.is_simple_foldable_order([4, 2, 1, 3, 0], visualization=False))
         random_simple_foldable(strip)
+        self.assertTrue(True)
 
     def test_strategy(self, strategy):
         for j in range(1000):
@@ -161,13 +158,13 @@ class VisualizationTests(unittest.TestCase):
             print('---------- Success ----------')
 
     def test_least_strategy(self):
-        self.test_strategy(fold_least_crease)
+        self.test_strategy(fold_least_crease_strategy)
 
     def test_analyze_database(self):
         self.assertTrue(visualize_order_amount())
 
     def test_states(self):
-        analyze_states()
+        self.assertTrue(analyze_states())
 
     def test_consecutive(self):
         self.assertTrue(test_if_consecutive_exists())
@@ -180,3 +177,9 @@ class VisualizationTests(unittest.TestCase):
 
     def test_no_two_way_fold(self):
         self.assertTrue(analyze_no_two_direction_fold())
+
+    def test_get_strip(self):
+        self.assertTrue(analyze_strip('1V1V1V1V1V1V1V1V1V1V1'))
+
+    def test_stamp_folding(self):
+        self.assertTrue(analyze_stamp_folding())
